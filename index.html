@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordHunt — English Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080810;--card:#0f0f1a;--card2:#141425;
+  --border:#1e1e35;--border2:#2a2a45;
+  --accent:#6c5ce7;--accent2:#ff6584;--green:#00f5a0;--gold:#ffd700;
+  --text:#eeeef8;--muted:#5555aa;--muted2:#8888cc;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;
+  padding:0;overflow-x:hidden;position:relative}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:300px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(108,92,231,0.12) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(8,8,16,0.9);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);padding:12px 20px;
+  display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:15px;font-family:'Space Mono',monospace;color:var(--accent);letter-spacing:3px;font-weight:700}
+.logo span{color:var(--accent2)}
+.nav-stats{display:flex;gap:16px}
+.nstat{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-align:center}
+.nstat b{display:block;font-size:16px;color:var(--text);margin-bottom:2px}
+
+/* MAIN */
+main{max-width:560px;margin:0 auto;padding:20px 16px 100px;position:relative;z-index:1}
+
+/* PROGRESS */
+.prog-wrap{background:var(--border);height:4px;border-radius:4px;margin-bottom:8px;overflow:hidden}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.prog-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:20px;display:flex;justify-content:space-between}
+
+/* TABS */
+.tabs{display:flex;gap:6px;margin-bottom:20px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:4px}
+.tab{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--muted2);
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px}
+.tab.active{background:var(--accent);color:#fff;box-shadow:0 4px 20px rgba(108,92,231,.4)}
+
+/* STREAK */
+.streak{display:inline-flex;align-items:center;gap:8px;background:rgba(255,215,0,.08);
+  border:1px solid rgba(255,215,0,.2);border-radius:30px;padding:8px 16px;
+  font-size:13px;font-weight:700;color:var(--gold);font-family:'Space Mono',monospace;margin-bottom:16px}
+
+/* SESSION STATS */
+.srow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center}
+.scard .num{font-size:20px;font-weight:800;margin-bottom:2px}
+.scard .lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+
+/* MAIN CARD */
+.card-wrap{perspective:1200px;margin-bottom:16px}
+.card{min-height:240px;background:var(--card);border:1px solid var(--border2);border-radius:24px;
+  padding:36px 28px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 20px 60px rgba(108,92,231,.15)}
+.card:active{transform:translateY(0)}
+.card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0;transition:opacity .3s}
+.card.revealed::after{opacity:1}
+.card-glow{position:absolute;top:-80px;right:-80px;width:200px;height:200px;
+  background:radial-gradient(circle,rgba(108,92,231,.06) 0%,transparent 70%);pointer-events:none}
+.cat-badge{display:inline-block;font-family:'Space Mono',monospace;font-size:9px;
+  color:var(--accent);letter-spacing:2px;text-transform:uppercase;
+  background:rgba(108,92,231,.1);border:1px solid rgba(108,92,231,.2);
+  border-radius:20px;padding:4px 10px;margin-bottom:20px}
+.word-big{font-size:52px;font-weight:900;letter-spacing:-2px;line-height:1;margin-bottom:10px;
+  background:linear-gradient(135deg,var(--text),rgba(238,238,248,.7));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.phonetic{font-family:'Space Mono',monospace;font-size:13px;color:var(--muted2);margin-bottom:24px}
+.translation{font-size:22px;font-weight:800;color:var(--green);margin-bottom:10px;
+  opacity:0;transition:opacity .3s;transform:translateY(6px);transition:all .3s}
+.example{font-size:13px;color:var(--muted2);font-style:italic;line-height:1.6;
+  opacity:0;transition:all .3s;transform:translateY(6px)}
+.card.revealed .translation,.card.revealed .example{opacity:1;transform:translateY(0)}
+.tap-hint{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);
+  letter-spacing:1px;margin-top:20px;transition:opacity .3s}
+.card.revealed .tap-hint{opacity:0}
+.diff-tag{position:absolute;top:14px;right:14px;font-family:'Space Mono',monospace;
+  font-size:9px;padding:3px 8px;border-radius:10px;font-weight:700}
+.diff-new{background:rgba(108,92,231,.15);color:var(--accent);border:1px solid rgba(108,92,231,.3)}
+.diff-learning{background:rgba(255,165,0,.1);color:#ffa500;border:1px solid rgba(255,165,0,.3)}
+.diff-review{background:rgba(0,245,160,.08);color:var(--green);border:1px solid rgba(0,245,160,.2)}
+.diff-known{background:rgba(255,215,0,.08);color:var(--gold);border:1px solid rgba(255,215,0,.2)}
+
+/* ACTION BUTTONS */
+.btns{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;
+  opacity:0;pointer-events:none;transition:opacity .3s;transform:translateY(8px);transition:all .3s}
+.btns.show{opacity:1;pointer-events:all;transform:translateY(0)}
+.btn{padding:14px 8px;border-radius:14px;border:1px solid var(--border2);background:var(--card);
+  color:var(--text);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;
+  transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.btn:hover{transform:translateY(-2px)}
+.btn .icon{font-size:16px}
+.btn .lbl{font-size:11px}
+.btn .intv{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)}
+.btn-again{border-color:rgba(255,101,132,.3)} .btn-again:hover{background:rgba(255,101,132,.12);border-color:var(--accent2)}
+.btn-hard{border-color:rgba(255,165,0,.25)} .btn-hard:hover{background:rgba(255,165,0,.1);border-color:rgba(255,165,0,.5)}
+.btn-good{border-color:rgba(108,92,231,.3)} .btn-good:hover{background:rgba(108,92,231,.12);border-color:var(--accent)}
+.btn-easy{border-color:rgba(0,245,160,.2)} .btn-easy:hover{background:rgba(0,245,160,.08);border-color:var(--green)}
+
+/* QUIZ */
+.quiz-q{background:var(--card);border:1px solid var(--border2);border-radius:24px;
+  padding:32px 24px;text-align:center;margin-bottom:14px}
+.quiz-word{font-size:44px;font-weight:900;letter-spacing:-2px;margin-bottom:8px;
+  background:linear-gradient(135deg,var(--text),rgba(238,238,248,.7));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qopt{padding:18px;background:var(--card);border:1px solid var(--border2);border-radius:14px;
+  color:var(--text);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;transition:all .2s;text-align:center;line-height:1.3}
+.qopt:hover:not(.dis){border-color:var(--accent);background:rgba(108,92,231,.08);transform:translateY(-2px)}
+.qopt.correct{border-color:var(--green)!important;background:rgba(0,245,160,.1)!important;color:var(--green)!important}
+.qopt.wrong{border-color:var(--accent2)!important;background:rgba(255,101,132,.1)!important;color:var(--accent2)!important}
+.qopt.dis{cursor:default}
+
+/* WORD HUNT */
+.hunt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.hunt-card{background:var(--card);border:1px solid var(--border2);border-radius:16px;
+  padding:16px;cursor:pointer;transition:all .2s;position:relative}
+.hunt-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.hunt-card.selected{border-color:var(--accent2);background:rgba(255,101,132,.05)}
+.hunt-word{font-size:20px;font-weight:800;margin-bottom:4px}
+.hunt-trans{font-size:12px;color:var(--muted2)}
+.hunt-score{position:absolute;top:10px;right:10px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+.hunt-bar{height:3px;border-radius:2px;margin-top:8px;background:var(--border)}
+.hunt-bar-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* VOCAB LIST */
+.search-box{width:100%;padding:14px 18px;background:var(--card);border:1px solid var(--border2);
+  border-radius:14px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;
+  outline:none;margin-bottom:14px;transition:border-color .2s}
+.search-box:focus{border-color:var(--accent)}
+.search-box::placeholder{color:var(--muted)}
+.vocab-list{display:flex;flex-direction:column;gap:6px;max-height:500px;overflow-y:auto;padding-right:4px}
+.vocab-list::-webkit-scrollbar{width:4px}
+.vocab-list::-webkit-scrollbar-track{background:var(--card)}
+.vocab-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.vitem{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;transition:all .2s}
+.vitem:hover{border-color:var(--border2);background:var(--card2)}
+.vword{font-size:16px;font-weight:700}
+.vtrans{font-size:12px;color:var(--muted2);margin-top:2px}
+.vbadge{font-family:'Space Mono',monospace;font-size:9px;padding:4px 8px;border-radius:8px;font-weight:700;white-space:nowrap}
+
+/* HIDDEN */
+.hidden{display:none!important}
+
+/* TOAST */
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);
+  background:var(--card2);border:1px solid var(--border2);border-radius:14px;
+  padding:12px 20px;font-size:13px;font-weight:700;transition:transform .3s;z-index:200;
+  box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">WORD<span>HUNT</span></div>
+  <div class="nav-stats">
+    <div class="nstat"><b id="navToday">0</b>сегодня</div>
+    <div class="nstat"><b id="navStreak">0</b>🔥 дней</div>
+    <div class="nstat"><b id="navKnown">0</b>знаю</div>
+    <div class="nstat"><b id="navTotal">0</b>слов</div>
+  </div>
+</nav>
+
+<main>
+  <div class="prog-wrap"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
+  <div class="prog-label"><span id="progLabel">Загрузка...</span><span id="progPct">0%</span></div>
+
+  <div class="streak" id="streakBadge">🔥 <span id="streakDays">0</span> дней подряд</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('flash',this)">Карточки</button>
+    <button class="tab" onclick="switchTab('quiz',this)">Квиз</button>
+    <button class="tab" onclick="switchTab('hunt',this)">Хант</button>
+    <button class="tab" onclick="switchTab('vocab',this)">Слова</button>
+  </div>
+
+  <!-- FLASHCARD -->
+  <div id="tab-flash">
+    <div class="srow">
+      <div class="scard"><div class="num" id="sc-again" style="color:var(--accent2)">0</div><div class="lbl">Снова</div></div>
+      <div class="scard"><div class="num" id="sc-hard" style="color:#ffa500">0</div><div class="lbl">Сложно</div></div>
+      <div class="scard"><div class="num" id="sc-good" style="color:var(--accent)">0</div><div class="lbl">Хорошо</div></div>
+      <div class="scard"><div class="num" id="sc-easy" style="color:var(--green)">0</div><div class="lbl">Легко</div></div>
+    </div>
+    <div class="card-wrap">
+      <div class="card" id="mainCard" onclick="revealCard()">
+        <div class="card-glow"></div>
+        <div class="diff-tag diff-new" id="diffTag">NEW</div>
+        <div class="cat-badge" id="catBadge">NOUN</div>
+        <div class="word-big" id="cardWord">—</div>
+        <div class="phonetic" id="cardPhon"></div>
+        <div class="translation" id="cardTrans"></div>
+        <div class="example" id="cardEx"></div>
+        <div class="tap-hint">нажми чтобы открыть</div>
+      </div>
+    </div>
+    <div class="btns" id="actionBtns">
+      <button class="btn btn-again" onclick="rate('again')"><span class="icon">🔁</span><span class="lbl">Снова</span><span class="intv">&lt;1 мин</span></button>
+      <button class="btn btn-hard" onclick="rate('hard')"><span class="icon">😤</span><span class="lbl">Сложно</span><span class="intv">~10 мин</span></button>
+      <button class="btn btn-good" onclick="rate('good')"><span class="icon">👍</span><span class="lbl">Хорошо</span><span class="intv">~1 день</span></button>
+      <button class="btn btn-easy" onclick="rate('easy')"><span class="icon">⚡</span><span class="lbl">Легко</span><span class="intv">~4 дня</span></button>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="tab-quiz" class="hidden">
+    <div class="quiz-q">
+      <div class="cat-badge" id="qCat">NOUN</div>
+      <div class="quiz-word" id="qWord">—</div>
+      <div class="phonetic" id="qPhon"></div>
+    </div>
+    <div class="quiz-opts" id="qOpts"></div>
+  </div>
+
+  <!-- HUNT MODE -->
+  <div id="tab-hunt" class="hidden">
+    <p style="font-size:13px;color:var(--muted2);margin-bottom:16px;font-family:'Space Mono',monospace;line-height:1.6">
+      Слова которые знаешь плохо — появляются чаще. Оцени каждое слово чтобы настроить систему.
+    </p>
+    <div class="hunt-grid" id="huntGrid"></div>
+    <button onclick="loadHunt()" style="width:100%;padding:14px;background:var(--card);border:1px solid var(--border2);
+      border-radius:14px;color:var(--muted2);font-family:'Syne',sans-serif;font-size:13px;
+      font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+      🎲 Новые слова
+    </button>
+  </div>
+
+  <!-- VOCAB LIST -->
+  <div id="tab-vocab" class="hidden">
+    <input class="search-box" id="searchBox" placeholder="🔍 Искать слово..." oninput="renderVocab()">
+    <div class="vocab-list" id="vocabList"></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ WORD DATABASE ============
+const WORDS = [{"w": "person", "t": "человек", "p": "/ˈpɜrsən/", "cat": "NOUN", "ex": "She is a kind person."}, {"w": "man", "t": "мужчина", "p": "/mæn/", "cat": "NOUN", "ex": "The man was very tall."}, {"w": "woman", "t": "женщина", "p": "/ˈwʊmən/", "cat": "NOUN", "ex": "The woman smiled kindly."}, {"w": "child", "t": "ребёнок", "p": "/tʃaɪld/", "cat": "NOUN", "ex": "The child is sleeping."}, {"w": "family", "t": "семья", "p": "/ˈfæmɪli/", "cat": "NOUN", "ex": "My family is everything."}, {"w": "friend", "t": "друг", "p": "/frɛnd/", "cat": "NOUN", "ex": "He is my best friend."}, {"w": "people", "t": "люди", "p": "/ˈpiːpəl/", "cat": "NOUN", "ex": "People are unpredictable."}, {"w": "boy", "t": "мальчик", "p": "/bɔɪ/", "cat": "NOUN", "ex": "The boy runs fast."}, {"w": "girl", "t": "девочка", "p": "/ɡɜrl/", "cat": "NOUN", "ex": "The girl laughed."}, {"w": "group", "t": "группа", "p": "/ɡruːp/", "cat": "NOUN", "ex": "We work as a group."}, {"w": "team", "t": "команда", "p": "/tiːm/", "cat": "NOUN", "ex": "Our team is strong."}, {"w": "partner", "t": "партнёр", "p": "/ˈpɑrtnər/", "cat": "NOUN", "ex": "He is my business partner."}, {"w": "leader", "t": "лидер", "p": "/ˈliːdər/", "cat": "NOUN", "ex": "She is a natural leader."}, {"w": "manager", "t": "менеджер", "p": "/ˈmænɪdʒər/", "cat": "NOUN", "ex": "The manager approved it."}, {"w": "customer", "t": "покупатель", "p": "/ˈkʌstəmər/", "cat": "NOUN", "ex": "The customer is always right."}, {"w": "client", "t": "клиент", "p": "/ˈklaɪənt/", "cat": "NOUN", "ex": "Our client is happy."}, {"w": "boss", "t": "начальник", "p": "/bɒs/", "cat": "NOUN", "ex": "My boss is strict."}, {"w": "employee", "t": "сотрудник", "p": "/ˌɛmplɔɪˈiː/", "cat": "NOUN", "ex": "She is a great employee."}, {"w": "owner", "t": "владелец", "p": "/ˈoʊnər/", "cat": "NOUN", "ex": "Who is the owner?"}, {"w": "expert", "t": "эксперт", "p": "/ˈɛkspɜrt/", "cat": "NOUN", "ex": "He is an expert."}, {"w": "time", "t": "время", "p": "/taɪm/", "cat": "NOUN", "ex": "Time is money."}, {"w": "year", "t": "год", "p": "/jɪr/", "cat": "NOUN", "ex": "This year was amazing."}, {"w": "month", "t": "месяц", "p": "/mʌnθ/", "cat": "NOUN", "ex": "Last month was busy."}, {"w": "week", "t": "неделя", "p": "/wiːk/", "cat": "NOUN", "ex": "See you next week."}, {"w": "day", "t": "день", "p": "/deɪ/", "cat": "NOUN", "ex": "Have a great day."}, {"w": "hour", "t": "час", "p": "/aʊər/", "cat": "NOUN", "ex": "It takes one hour."}, {"w": "minute", "t": "минута", "p": "/ˈmɪnɪt/", "cat": "NOUN", "ex": "Wait a minute."}, {"w": "second", "t": "секунда", "p": "/ˈsɛkənd/", "cat": "NOUN", "ex": "Just a second."}, {"w": "morning", "t": "утро", "p": "/ˈmɔrnɪŋ/", "cat": "NOUN", "ex": "Good morning!"}, {"w": "night", "t": "ночь", "p": "/naɪt/", "cat": "NOUN", "ex": "Good night."}, {"w": "evening", "t": "вечер", "p": "/ˈiːvnɪŋ/", "cat": "NOUN", "ex": "Good evening."}, {"w": "today", "t": "сегодня", "p": "/təˈdeɪ/", "cat": "NOUN", "ex": "Today is important."}, {"w": "tomorrow", "t": "завтра", "p": "/təˈmɒroʊ/", "cat": "NOUN", "ex": "Do it tomorrow."}, {"w": "yesterday", "t": "вчера", "p": "/ˈjɛstərdeɪ/", "cat": "NOUN", "ex": "I saw him yesterday."}, {"w": "future", "t": "будущее", "p": "/ˈfjuːtʃər/", "cat": "NOUN", "ex": "Think about the future."}, {"w": "past", "t": "прошлое", "p": "/pæst/", "cat": "NOUN", "ex": "Learn from the past."}, {"w": "moment", "t": "момент", "p": "/ˈmoʊmənt/", "cat": "NOUN", "ex": "Wait for the right moment."}, {"w": "period", "t": "период", "p": "/ˈpɪəriəd/", "cat": "NOUN", "ex": "This is a tough period."}, {"w": "deadline", "t": "дедлайн", "p": "/ˈdɛdlaɪn/", "cat": "NOUN", "ex": "The deadline is Friday."}, {"w": "schedule", "t": "расписание", "p": "/ˈskɛdʒuːl/", "cat": "NOUN", "ex": "Check the schedule."}, {"w": "place", "t": "место", "p": "/pleɪs/", "cat": "NOUN", "ex": "This is a great place."}, {"w": "world", "t": "мир", "p": "/wɜrld/", "cat": "NOUN", "ex": "See the world."}, {"w": "country", "t": "страна", "p": "/ˈkʌntri/", "cat": "NOUN", "ex": "What country are you from?"}, {"w": "city", "t": "город", "p": "/ˈsɪti/", "cat": "NOUN", "ex": "I live in a big city."}, {"w": "home", "t": "дом", "p": "/hoʊm/", "cat": "NOUN", "ex": "There is no place like home."}, {"w": "house", "t": "дом", "p": "/haʊs/", "cat": "NOUN", "ex": "They bought a house."}, {"w": "room", "t": "комната", "p": "/ruːm/", "cat": "NOUN", "ex": "The room is clean."}, {"w": "office", "t": "офис", "p": "/ˈɒfɪs/", "cat": "NOUN", "ex": "I work in an office."}, {"w": "area", "t": "область / район", "p": "/ˈɛəriə/", "cat": "NOUN", "ex": "This area is safe."}, {"w": "street", "t": "улица", "p": "/striːt/", "cat": "NOUN", "ex": "Cross the street carefully."}, {"w": "road", "t": "дорога", "p": "/roʊd/", "cat": "NOUN", "ex": "The road is long."}, {"w": "floor", "t": "пол / этаж", "p": "/flɔːr/", "cat": "NOUN", "ex": "Third floor, please."}, {"w": "market", "t": "рынок", "p": "/ˈmɑrkɪt/", "cat": "NOUN", "ex": "The market is growing."}, {"w": "school", "t": "школа", "p": "/skuːl/", "cat": "NOUN", "ex": "I miss school."}, {"w": "hospital", "t": "больница", "p": "/ˈhɒspɪtəl/", "cat": "NOUN", "ex": "Go to the hospital."}, {"w": "store", "t": "магазин", "p": "/stɔːr/", "cat": "NOUN", "ex": "Let us go to the store."}, {"w": "bank", "t": "банк", "p": "/bæŋk/", "cat": "NOUN", "ex": "The bank is closed."}, {"w": "restaurant", "t": "ресторан", "p": "/ˈrɛstərɒnt/", "cat": "NOUN", "ex": "Let us eat at a restaurant."}, {"w": "hotel", "t": "отель", "p": "/hoʊˈtɛl/", "cat": "NOUN", "ex": "Book a hotel room."}, {"w": "airport", "t": "аэропорт", "p": "/ˈɛrpɔːrt/", "cat": "NOUN", "ex": "Meet me at the airport."}, {"w": "work", "t": "работа", "p": "/wɜrk/", "cat": "NOUN", "ex": "I love my work."}, {"w": "job", "t": "работа / вакансия", "p": "/dʒɒb/", "cat": "NOUN", "ex": "I got a new job."}, {"w": "company", "t": "компания", "p": "/ˈkʌmpəni/", "cat": "NOUN", "ex": "She works at a big company."}, {"w": "business", "t": "бизнес", "p": "/ˈbɪznɪs/", "cat": "NOUN", "ex": "Start a business."}, {"w": "project", "t": "проект", "p": "/ˈprɒdʒɛkt/", "cat": "NOUN", "ex": "The project is on track."}, {"w": "service", "t": "услуга", "p": "/ˈsɜrvɪs/", "cat": "NOUN", "ex": "Great service!"}, {"w": "product", "t": "продукт", "p": "/ˈprɒdʌkt/", "cat": "NOUN", "ex": "Launch the product."}, {"w": "deal", "t": "сделка", "p": "/diːl/", "cat": "NOUN", "ex": "Close the deal."}, {"w": "offer", "t": "предложение", "p": "/ˈɒfər/", "cat": "NOUN", "ex": "That is a good offer."}, {"w": "contract", "t": "контракт", "p": "/ˈkɒntrækt/", "cat": "NOUN", "ex": "Sign the contract."}, {"w": "meeting", "t": "встреча", "p": "/ˈmiːtɪŋ/", "cat": "NOUN", "ex": "The meeting is at 3pm."}, {"w": "call", "t": "звонок", "p": "/kɔːl/", "cat": "NOUN", "ex": "Schedule a call."}, {"w": "report", "t": "отчёт", "p": "/rɪˈpɔrt/", "cat": "NOUN", "ex": "Send me the report."}, {"w": "goal", "t": "цель", "p": "/ɡoʊl/", "cat": "NOUN", "ex": "Set a clear goal."}, {"w": "plan", "t": "план", "p": "/plæn/", "cat": "NOUN", "ex": "Stick to the plan."}, {"w": "strategy", "t": "стратегия", "p": "/ˈstrætɪdʒi/", "cat": "NOUN", "ex": "We need a strategy."}, {"w": "result", "t": "результат", "p": "/rɪˈzʌlt/", "cat": "NOUN", "ex": "The result is impressive."}, {"w": "process", "t": "процесс", "p": "/ˈprɒsɛs/", "cat": "NOUN", "ex": "Automate the process."}, {"w": "task", "t": "задача", "p": "/tæsk/", "cat": "NOUN", "ex": "Complete the task."}, {"w": "budget", "t": "бюджет", "p": "/ˈbʌdʒɪt/", "cat": "NOUN", "ex": "What is the budget?"}, {"w": "revenue", "t": "доход", "p": "/ˈrɛvɪnjuː/", "cat": "NOUN", "ex": "Revenue grew 30%."}, {"w": "profit", "t": "прибыль", "p": "/ˈprɒfɪt/", "cat": "NOUN", "ex": "Profit is growing."}, {"w": "money", "t": "деньги", "p": "/ˈmʌni/", "cat": "NOUN", "ex": "Money is a tool."}, {"w": "price", "t": "цена", "p": "/praɪs/", "cat": "NOUN", "ex": "What is the price?"}, {"w": "cost", "t": "стоимость", "p": "/kɒst/", "cat": "NOUN", "ex": "The cost is high."}, {"w": "value", "t": "ценность", "p": "/ˈvæljuː/", "cat": "NOUN", "ex": "Add real value."}, {"w": "payment", "t": "оплата", "p": "/ˈpeɪmənt/", "cat": "NOUN", "ex": "Payment received."}, {"w": "invoice", "t": "счёт / инвойс", "p": "/ˈɪnvɔɪs/", "cat": "NOUN", "ex": "Send the invoice."}, {"w": "salary", "t": "зарплата", "p": "/ˈsæləri/", "cat": "NOUN", "ex": "Negotiate the salary."}, {"w": "income", "t": "доход", "p": "/ˈɪnkʌm/", "cat": "NOUN", "ex": "Passive income is great."}, {"w": "technology", "t": "технология", "p": "/tɛkˈnɒlədʒi/", "cat": "NOUN", "ex": "Technology changes fast."}, {"w": "system", "t": "система", "p": "/ˈsɪstəm/", "cat": "NOUN", "ex": "The system is down."}, {"w": "program", "t": "программа", "p": "/ˈproʊɡræm/", "cat": "NOUN", "ex": "Run the program."}, {"w": "data", "t": "данные", "p": "/ˈdeɪtə/", "cat": "NOUN", "ex": "Analyze the data."}, {"w": "software", "t": "программное обеспечение", "p": "/ˈsɒftweər/", "cat": "NOUN", "ex": "Update the software."}, {"w": "website", "t": "сайт", "p": "/ˈwɛbsaɪt/", "cat": "NOUN", "ex": "Visit our website."}, {"w": "application", "t": "приложение", "p": "/ˌæplɪˈkeɪʃən/", "cat": "NOUN", "ex": "Download the application."}, {"w": "database", "t": "база данных", "p": "/ˈdeɪtəbeɪs/", "cat": "NOUN", "ex": "Search the database."}, {"w": "server", "t": "сервер", "p": "/ˈsɜrvər/", "cat": "NOUN", "ex": "The server is running."}, {"w": "network", "t": "сеть", "p": "/ˈnɛtwɜrk/", "cat": "NOUN", "ex": "Connect to the network."}, {"w": "platform", "t": "платформа", "p": "/ˈplætfɔːrm/", "cat": "NOUN", "ex": "Choose the right platform."}, {"w": "feature", "t": "функция / особенность", "p": "/ˈfiːtʃər/", "cat": "NOUN", "ex": "Add a new feature."}, {"w": "version", "t": "версия", "p": "/ˈvɜrʒən/", "cat": "NOUN", "ex": "Update to the latest version."}, {"w": "device", "t": "устройство", "p": "/dɪˈvaɪs/", "cat": "NOUN", "ex": "Connect the device."}, {"w": "tool", "t": "инструмент", "p": "/tuːl/", "cat": "NOUN", "ex": "Use the right tool."}, {"w": "workflow", "t": "рабочий процесс", "p": "/ˈwɜrkfloʊ/", "cat": "NOUN", "ex": "Automate your workflow."}, {"w": "automation", "t": "автоматизация", "p": "/ˌɔːtəˈmeɪʃən/", "cat": "NOUN", "ex": "Automation saves time."}, {"w": "integration", "t": "интеграция", "p": "/ˌɪntɪˈɡreɪʃən/", "cat": "NOUN", "ex": "API integration is ready."}, {"w": "interface", "t": "интерфейс", "p": "/ˈɪntərfeɪs/", "cat": "NOUN", "ex": "Clean interface."}, {"w": "algorithm", "t": "алгоритм", "p": "/ˈælɡərɪðəm/", "cat": "NOUN", "ex": "The algorithm works."}, {"w": "message", "t": "сообщение", "p": "/ˈmɛsɪdʒ/", "cat": "NOUN", "ex": "Send me a message."}, {"w": "email", "t": "электронная почта", "p": "/ˈiːmeɪl/", "cat": "NOUN", "ex": "Check your email."}, {"w": "word", "t": "слово", "p": "/wɜrd/", "cat": "NOUN", "ex": "Choose your words wisely."}, {"w": "language", "t": "язык", "p": "/ˈlæŋɡwɪdʒ/", "cat": "NOUN", "ex": "Learn a new language."}, {"w": "question", "t": "вопрос", "p": "/ˈkwɛstʃən/", "cat": "NOUN", "ex": "Ask a question."}, {"w": "answer", "t": "ответ", "p": "/ˈænsər/", "cat": "NOUN", "ex": "What is your answer?"}, {"w": "idea", "t": "идея", "p": "/aɪˈdɪə/", "cat": "NOUN", "ex": "That is a great idea."}, {"w": "opinion", "t": "мнение", "p": "/əˈpɪnjən/", "cat": "NOUN", "ex": "What is your opinion?"}, {"w": "information", "t": "информация", "p": "/ˌɪnfəˈmeɪʃən/", "cat": "NOUN", "ex": "Need more information."}, {"w": "news", "t": "новости", "p": "/njuːz/", "cat": "NOUN", "ex": "Check the news."}, {"w": "story", "t": "история", "p": "/ˈstɔːri/", "cat": "NOUN", "ex": "Tell me a story."}, {"w": "report", "t": "доклад", "p": "/rɪˈpɔːrt/", "cat": "NOUN", "ex": "Write a report."}, {"w": "content", "t": "контент", "p": "/ˈkɒntɛnt/", "cat": "NOUN", "ex": "Create good content."}, {"w": "feedback", "t": "обратная связь", "p": "/ˈfiːdbæk/", "cat": "NOUN", "ex": "Give me feedback."}, {"w": "review", "t": "отзыв / обзор", "p": "/rɪˈvjuː/", "cat": "NOUN", "ex": "Leave a review."}, {"w": "comment", "t": "комментарий", "p": "/ˈkɒmɛnt/", "cat": "NOUN", "ex": "Add a comment."}, {"w": "description", "t": "описание", "p": "/dɪˈskrɪpʃən/", "cat": "NOUN", "ex": "Write a description."}, {"w": "example", "t": "пример", "p": "/ɪɡˈzɑːmpəl/", "cat": "NOUN", "ex": "Give me an example."}, {"w": "detail", "t": "деталь", "p": "/ˈdiːteɪl/", "cat": "NOUN", "ex": "Pay attention to detail."}, {"w": "point", "t": "суть / смысл", "p": "/pɔɪnt/", "cat": "NOUN", "ex": "What is the point?"}, {"w": "life", "t": "жизнь", "p": "/laɪf/", "cat": "NOUN", "ex": "Life is short."}, {"w": "fact", "t": "факт", "p": "/fækt/", "cat": "NOUN", "ex": "That is a fact."}, {"w": "case", "t": "случай", "p": "/keɪs/", "cat": "NOUN", "ex": "In this case, yes."}, {"w": "reason", "t": "причина", "p": "/ˈriːzən/", "cat": "NOUN", "ex": "What is the reason?"}, {"w": "way", "t": "путь / способ", "p": "/weɪ/", "cat": "NOUN", "ex": "Find a better way."}, {"w": "part", "t": "часть", "p": "/pɑːrt/", "cat": "NOUN", "ex": "This is part of the plan."}, {"w": "problem", "t": "проблема", "p": "/ˈprɒbləm/", "cat": "NOUN", "ex": "Solve the problem."}, {"w": "solution", "t": "решение", "p": "/səˈluːʃən/", "cat": "NOUN", "ex": "Find a solution."}, {"w": "change", "t": "изменение", "p": "/tʃeɪndʒ/", "cat": "NOUN", "ex": "Change is good."}, {"w": "difference", "t": "разница", "p": "/ˈdɪfrəns/", "cat": "NOUN", "ex": "What is the difference?"}, {"w": "experience", "t": "опыт", "p": "/ɪkˈspɪəriəns/", "cat": "NOUN", "ex": "I have experience."}, {"w": "opportunity", "t": "возможность", "p": "/ˌɒpəˈtjuːnɪti/", "cat": "NOUN", "ex": "A great opportunity."}, {"w": "challenge", "t": "вызов", "p": "/ˈtʃælɪndʒ/", "cat": "NOUN", "ex": "Face the challenge."}, {"w": "risk", "t": "риск", "p": "/rɪsk/", "cat": "NOUN", "ex": "Take the risk."}, {"w": "success", "t": "успех", "p": "/səkˈsɛs/", "cat": "NOUN", "ex": "Success takes time."}, {"w": "failure", "t": "провал", "p": "/ˈfeɪljər/", "cat": "NOUN", "ex": "Failure is a lesson."}, {"w": "progress", "t": "прогресс", "p": "/ˈprɒɡrɛs/", "cat": "NOUN", "ex": "Track your progress."}, {"w": "growth", "t": "рост", "p": "/ɡroʊθ/", "cat": "NOUN", "ex": "Focus on growth."}, {"w": "action", "t": "действие", "p": "/ˈækʃən/", "cat": "NOUN", "ex": "Take action now."}, {"w": "decision", "t": "решение", "p": "/dɪˈsɪʒən/", "cat": "NOUN", "ex": "Make a decision."}, {"w": "choice", "t": "выбор", "p": "/tʃɔɪs/", "cat": "NOUN", "ex": "It is your choice."}, {"w": "skill", "t": "навык", "p": "/skɪl/", "cat": "NOUN", "ex": "Build your skills."}, {"w": "knowledge", "t": "знание", "p": "/ˈnɒlɪdʒ/", "cat": "NOUN", "ex": "Knowledge is power."}, {"w": "habit", "t": "привычка", "p": "/ˈhæbɪt/", "cat": "NOUN", "ex": "Build good habits."}, {"w": "rule", "t": "правило", "p": "/ruːl/", "cat": "NOUN", "ex": "Follow the rules."}, {"w": "method", "t": "метод", "p": "/ˈmɛθəd/", "cat": "NOUN", "ex": "Use the right method."}, {"w": "level", "t": "уровень", "p": "/ˈlɛvəl/", "cat": "NOUN", "ex": "Reach the next level."}, {"w": "stage", "t": "этап", "p": "/steɪdʒ/", "cat": "NOUN", "ex": "What stage are you at?"}, {"w": "step", "t": "шаг", "p": "/stɛp/", "cat": "NOUN", "ex": "Take the first step."}, {"w": "mind", "t": "ум / разум", "p": "/maɪnd/", "cat": "NOUN", "ex": "Open your mind."}, {"w": "be", "t": "быть", "p": "/biː/", "cat": "VERB", "ex": "Be yourself."}, {"w": "have", "t": "иметь", "p": "/hæv/", "cat": "VERB", "ex": "I have a question."}, {"w": "do", "t": "делать", "p": "/duː/", "cat": "VERB", "ex": "Just do it."}, {"w": "say", "t": "говорить", "p": "/seɪ/", "cat": "VERB", "ex": "What did you say?"}, {"w": "get", "t": "получать", "p": "/ɡɛt/", "cat": "VERB", "ex": "Get to work."}, {"w": "make", "t": "делать / создавать", "p": "/meɪk/", "cat": "VERB", "ex": "Make it happen."}, {"w": "go", "t": "идти", "p": "/ɡoʊ/", "cat": "VERB", "ex": "Let us go."}, {"w": "know", "t": "знать", "p": "/noʊ/", "cat": "VERB", "ex": "Do you know him?"}, {"w": "take", "t": "брать", "p": "/teɪk/", "cat": "VERB", "ex": "Take a break."}, {"w": "see", "t": "видеть", "p": "/siː/", "cat": "VERB", "ex": "I see the point."}, {"w": "come", "t": "приходить", "p": "/kʌm/", "cat": "VERB", "ex": "Come with me."}, {"w": "think", "t": "думать", "p": "/θɪŋk/", "cat": "VERB", "ex": "Think before you speak."}, {"w": "look", "t": "смотреть", "p": "/lʊk/", "cat": "VERB", "ex": "Look at this."}, {"w": "want", "t": "хотеть", "p": "/wɒnt/", "cat": "VERB", "ex": "I want to succeed."}, {"w": "give", "t": "давать", "p": "/ɡɪv/", "cat": "VERB", "ex": "Give it your best."}, {"w": "use", "t": "использовать", "p": "/juːz/", "cat": "VERB", "ex": "Use your skills."}, {"w": "find", "t": "находить", "p": "/faɪnd/", "cat": "VERB", "ex": "Find a solution."}, {"w": "tell", "t": "рассказывать", "p": "/tɛl/", "cat": "VERB", "ex": "Tell me more."}, {"w": "ask", "t": "спрашивать", "p": "/ɑːsk/", "cat": "VERB", "ex": "Ask for help."}, {"w": "seem", "t": "казаться", "p": "/siːm/", "cat": "VERB", "ex": "It seems right."}, {"w": "feel", "t": "чувствовать", "p": "/fiːl/", "cat": "VERB", "ex": "How do you feel?"}, {"w": "try", "t": "пробовать", "p": "/traɪ/", "cat": "VERB", "ex": "Try again."}, {"w": "leave", "t": "уходить / оставлять", "p": "/liːv/", "cat": "VERB", "ex": "Leave it to me."}, {"w": "put", "t": "класть", "p": "/pʊt/", "cat": "VERB", "ex": "Put it on the table."}, {"w": "mean", "t": "означать", "p": "/miːn/", "cat": "VERB", "ex": "What do you mean?"}, {"w": "keep", "t": "держать", "p": "/kiːp/", "cat": "VERB", "ex": "Keep going."}, {"w": "let", "t": "позволять", "p": "/lɛt/", "cat": "VERB", "ex": "Let me explain."}, {"w": "begin", "t": "начинать", "p": "/bɪˈɡɪn/", "cat": "VERB", "ex": "Let us begin."}, {"w": "show", "t": "показывать", "p": "/ʃoʊ/", "cat": "VERB", "ex": "Show me the result."}, {"w": "hear", "t": "слышать", "p": "/hɪr/", "cat": "VERB", "ex": "Did you hear that?"}, {"w": "play", "t": "играть", "p": "/pleɪ/", "cat": "VERB", "ex": "Play smart."}, {"w": "run", "t": "бежать", "p": "/rʌn/", "cat": "VERB", "ex": "Run the script."}, {"w": "move", "t": "двигаться", "p": "/muːv/", "cat": "VERB", "ex": "Move forward."}, {"w": "live", "t": "жить", "p": "/lɪv/", "cat": "VERB", "ex": "Live your dream."}, {"w": "believe", "t": "верить", "p": "/bɪˈliːv/", "cat": "VERB", "ex": "Believe in yourself."}, {"w": "hold", "t": "держать", "p": "/hoʊld/", "cat": "VERB", "ex": "Hold on."}, {"w": "bring", "t": "приносить", "p": "/brɪŋ/", "cat": "VERB", "ex": "Bring value."}, {"w": "happen", "t": "происходить", "p": "/ˈhæpən/", "cat": "VERB", "ex": "Make it happen."}, {"w": "write", "t": "писать", "p": "/raɪt/", "cat": "VERB", "ex": "Write it down."}, {"w": "sit", "t": "сидеть", "p": "/sɪt/", "cat": "VERB", "ex": "Sit down, please."}, {"w": "stand", "t": "стоять", "p": "/stænd/", "cat": "VERB", "ex": "Stand out."}, {"w": "lose", "t": "терять", "p": "/luːz/", "cat": "VERB", "ex": "Do not lose focus."}, {"w": "pay", "t": "платить", "p": "/peɪ/", "cat": "VERB", "ex": "Pay attention."}, {"w": "meet", "t": "встречать", "p": "/miːt/", "cat": "VERB", "ex": "Nice to meet you."}, {"w": "include", "t": "включать", "p": "/ɪnˈkluːd/", "cat": "VERB", "ex": "Include all details."}, {"w": "continue", "t": "продолжать", "p": "/kənˈtɪnjuː/", "cat": "VERB", "ex": "Continue learning."}, {"w": "set", "t": "устанавливать", "p": "/sɛt/", "cat": "VERB", "ex": "Set a deadline."}, {"w": "learn", "t": "учиться", "p": "/lɜrn/", "cat": "VERB", "ex": "Learn every day."}, {"w": "change", "t": "менять", "p": "/tʃeɪndʒ/", "cat": "VERB", "ex": "Change the approach."}, {"w": "lead", "t": "вести / руководить", "p": "/liːd/", "cat": "VERB", "ex": "Lead by example."}, {"w": "understand", "t": "понимать", "p": "/ˌʌndəˈstænd/", "cat": "VERB", "ex": "Do you understand?"}, {"w": "watch", "t": "смотреть / наблюдать", "p": "/wɒtʃ/", "cat": "VERB", "ex": "Watch and learn."}, {"w": "follow", "t": "следовать / подписаться", "p": "/ˈfɒloʊ/", "cat": "VERB", "ex": "Follow the plan."}, {"w": "create", "t": "создавать", "p": "/kriˈeɪt/", "cat": "VERB", "ex": "Create something great."}, {"w": "open", "t": "открывать", "p": "/ˈoʊpən/", "cat": "VERB", "ex": "Open your mind."}, {"w": "start", "t": "начинать", "p": "/stɑːrt/", "cat": "VERB", "ex": "Start today."}, {"w": "stop", "t": "останавливаться", "p": "/stɒp/", "cat": "VERB", "ex": "Stop wasting time."}, {"w": "help", "t": "помогать", "p": "/hɛlp/", "cat": "VERB", "ex": "Can you help me?"}, {"w": "talk", "t": "разговаривать", "p": "/tɔːk/", "cat": "VERB", "ex": "Let us talk."}, {"w": "turn", "t": "поворачивать / превращаться", "p": "/tɜrn/", "cat": "VERB", "ex": "Turn your idea into action."}, {"w": "need", "t": "нуждаться", "p": "/niːd/", "cat": "VERB", "ex": "I need more time."}, {"w": "spend", "t": "тратить", "p": "/spɛnd/", "cat": "VERB", "ex": "Spend wisely."}, {"w": "send", "t": "отправлять", "p": "/sɛnd/", "cat": "VERB", "ex": "Send me the file."}, {"w": "read", "t": "читать", "p": "/riːd/", "cat": "VERB", "ex": "Read every day."}, {"w": "build", "t": "строить", "p": "/bɪld/", "cat": "VERB", "ex": "Build your future."}, {"w": "reach", "t": "достигать", "p": "/riːtʃ/", "cat": "VERB", "ex": "Reach your goals."}, {"w": "grow", "t": "расти", "p": "/ɡroʊ/", "cat": "VERB", "ex": "Grow every day."}, {"w": "improve", "t": "улучшать", "p": "/ɪmˈpruːv/", "cat": "VERB", "ex": "Improve yourself."}, {"w": "achieve", "t": "достигать", "p": "/əˈtʃiːv/", "cat": "VERB", "ex": "Achieve your goals."}, {"w": "earn", "t": "зарабатывать", "p": "/ɜrn/", "cat": "VERB", "ex": "Earn more."}, {"w": "invest", "t": "инвестировать", "p": "/ɪnˈvɛst/", "cat": "VERB", "ex": "Invest in yourself."}, {"w": "manage", "t": "управлять", "p": "/ˈmænɪdʒ/", "cat": "VERB", "ex": "Manage your time."}, {"w": "automate", "t": "автоматизировать", "p": "/ˈɔːtəmeɪt/", "cat": "VERB", "ex": "Automate your workflow."}, {"w": "scale", "t": "масштабировать", "p": "/skeɪl/", "cat": "VERB", "ex": "Scale the business."}, {"w": "launch", "t": "запускать", "p": "/lɔːntʃ/", "cat": "VERB", "ex": "Launch the product."}, {"w": "negotiate", "t": "переговоры вести", "p": "/nɪˈɡoʊʃieɪt/", "cat": "VERB", "ex": "Negotiate the deal."}, {"w": "present", "t": "представлять", "p": "/prɪˈzɛnt/", "cat": "VERB", "ex": "Present your idea."}, {"w": "connect", "t": "соединять", "p": "/kəˈnɛkt/", "cat": "VERB", "ex": "Connect with people."}, {"w": "deliver", "t": "доставлять / выполнять", "p": "/dɪˈlɪvər/", "cat": "VERB", "ex": "Deliver results."}, {"w": "execute", "t": "выполнять", "p": "/ˈɛksɪkjuːt/", "cat": "VERB", "ex": "Execute the plan."}, {"w": "focus", "t": "сосредотачиваться", "p": "/ˈfoʊkəs/", "cat": "VERB", "ex": "Focus on one thing."}, {"w": "apply", "t": "применять / подавать", "p": "/əˈplaɪ/", "cat": "VERB", "ex": "Apply for the job."}, {"w": "accept", "t": "принимать", "p": "/əkˈsɛpt/", "cat": "VERB", "ex": "Accept the challenge."}, {"w": "refuse", "t": "отказывать", "p": "/rɪˈfjuːz/", "cat": "VERB", "ex": "Do not refuse help."}, {"w": "choose", "t": "выбирать", "p": "/tʃuːz/", "cat": "VERB", "ex": "Choose wisely."}, {"w": "decide", "t": "решать", "p": "/dɪˈsaɪd/", "cat": "VERB", "ex": "Decide now."}, {"w": "plan", "t": "планировать", "p": "/plæn/", "cat": "VERB", "ex": "Plan ahead."}, {"w": "prepare", "t": "готовиться", "p": "/prɪˈpɛər/", "cat": "VERB", "ex": "Prepare for the meeting."}, {"w": "develop", "t": "развивать", "p": "/dɪˈvɛləp/", "cat": "VERB", "ex": "Develop your skills."}, {"w": "test", "t": "тестировать", "p": "/tɛst/", "cat": "VERB", "ex": "Test before launch."}, {"w": "check", "t": "проверять", "p": "/tʃɛk/", "cat": "VERB", "ex": "Check your email."}, {"w": "confirm", "t": "подтверждать", "p": "/kənˈfɜrm/", "cat": "VERB", "ex": "Confirm the meeting."}, {"w": "complete", "t": "завершать", "p": "/kəmˈpliːt/", "cat": "VERB", "ex": "Complete the task."}, {"w": "cancel", "t": "отменять", "p": "/ˈkænsəl/", "cat": "VERB", "ex": "Cancel the meeting."}, {"w": "hire", "t": "нанимать", "p": "/haɪər/", "cat": "VERB", "ex": "Hire good people."}, {"w": "fire", "t": "увольнять", "p": "/faɪər/", "cat": "VERB", "ex": "Do not get fired."}, {"w": "close", "t": "закрывать", "p": "/kloʊz/", "cat": "VERB", "ex": "Close the deal."}, {"w": "open", "t": "открывать", "p": "/ˈoʊpən/", "cat": "VERB", "ex": "Open new markets."}, {"w": "increase", "t": "увеличивать", "p": "/ɪnˈkriːs/", "cat": "VERB", "ex": "Increase revenue."}, {"w": "decrease", "t": "уменьшать", "p": "/dɪˈkriːs/", "cat": "VERB", "ex": "Decrease costs."}, {"w": "solve", "t": "решать", "p": "/sɒlv/", "cat": "VERB", "ex": "Solve the problem."}, {"w": "analyze", "t": "анализировать", "p": "/ˈænəlaɪz/", "cat": "VERB", "ex": "Analyze the data."}, {"w": "track", "t": "отслеживать", "p": "/træk/", "cat": "VERB", "ex": "Track your progress."}, {"w": "measure", "t": "измерять", "p": "/ˈmɛʒər/", "cat": "VERB", "ex": "Measure results."}, {"w": "optimize", "t": "оптимизировать", "p": "/ˈɒptɪmaɪz/", "cat": "VERB", "ex": "Optimize the process."}, {"w": "share", "t": "делиться", "p": "/ʃɛər/", "cat": "VERB", "ex": "Share your knowledge."}, {"w": "collaborate", "t": "сотрудничать", "p": "/kəˈlæbəreɪt/", "cat": "VERB", "ex": "Collaborate with others."}, {"w": "communicate", "t": "общаться", "p": "/kəˈmjuːnɪkeɪt/", "cat": "VERB", "ex": "Communicate clearly."}, {"w": "respond", "t": "отвечать", "p": "/rɪˈspɒnd/", "cat": "VERB", "ex": "Respond quickly."}, {"w": "request", "t": "просить / запрашивать", "p": "/rɪˈkwɛst/", "cat": "VERB", "ex": "Request a meeting."}, {"w": "good", "t": "хороший", "p": "/ɡʊd/", "cat": "ADJ", "ex": "Do good work."}, {"w": "new", "t": "новый", "p": "/njuː/", "cat": "ADJ", "ex": "Try something new."}, {"w": "first", "t": "первый", "p": "/fɜrst/", "cat": "ADJ", "ex": "First step matters."}, {"w": "last", "t": "последний", "p": "/lɑːst/", "cat": "ADJ", "ex": "Last chance."}, {"w": "long", "t": "длинный / долгий", "p": "/lɒŋ/", "cat": "ADJ", "ex": "Long road ahead."}, {"w": "great", "t": "великолепный", "p": "/ɡreɪt/", "cat": "ADJ", "ex": "Great job!"}, {"w": "little", "t": "маленький", "p": "/ˈlɪtəl/", "cat": "ADJ", "ex": "Every little step counts."}, {"w": "own", "t": "собственный", "p": "/oʊn/", "cat": "ADJ", "ex": "Build your own business."}, {"w": "other", "t": "другой", "p": "/ˈʌðər/", "cat": "ADJ", "ex": "Consider other options."}, {"w": "old", "t": "старый", "p": "/oʊld/", "cat": "ADJ", "ex": "Old habits die hard."}, {"w": "right", "t": "правильный", "p": "/raɪt/", "cat": "ADJ", "ex": "The right choice."}, {"w": "big", "t": "большой", "p": "/bɪɡ/", "cat": "ADJ", "ex": "Think big."}, {"w": "high", "t": "высокий", "p": "/haɪ/", "cat": "ADJ", "ex": "High standards."}, {"w": "small", "t": "маленький", "p": "/smɔːl/", "cat": "ADJ", "ex": "Small wins matter."}, {"w": "large", "t": "крупный", "p": "/lɑːrdʒ/", "cat": "ADJ", "ex": "Large market."}, {"w": "next", "t": "следующий", "p": "/nɛkst/", "cat": "ADJ", "ex": "Next step."}, {"w": "early", "t": "ранний", "p": "/ˈɜrli/", "cat": "ADJ", "ex": "Start early."}, {"w": "young", "t": "молодой", "p": "/jʌŋ/", "cat": "ADJ", "ex": "Stay young at heart."}, {"w": "important", "t": "важный", "p": "/ɪmˈpɔːrtənt/", "cat": "ADJ", "ex": "Very important."}, {"w": "different", "t": "другой", "p": "/ˈdɪfrənt/", "cat": "ADJ", "ex": "Try a different approach."}, {"w": "real", "t": "настоящий", "p": "/riːl/", "cat": "ADJ", "ex": "Real results."}, {"w": "possible", "t": "возможный", "p": "/ˈpɒsɪbl/", "cat": "ADJ", "ex": "Anything is possible."}, {"w": "free", "t": "свободный", "p": "/friː/", "cat": "ADJ", "ex": "Free your mind."}, {"w": "hard", "t": "сложный", "p": "/hɑːrd/", "cat": "ADJ", "ex": "Hard work pays off."}, {"w": "sure", "t": "уверенный", "p": "/ʃʊr/", "cat": "ADJ", "ex": "Are you sure?"}, {"w": "clear", "t": "ясный", "p": "/klɪr/", "cat": "ADJ", "ex": "Be clear and direct."}, {"w": "strong", "t": "сильный", "p": "/strɒŋ/", "cat": "ADJ", "ex": "Stay strong."}, {"w": "easy", "t": "лёгкий", "p": "/ˈiːzi/", "cat": "ADJ", "ex": "Nothing easy is worth it."}, {"w": "true", "t": "верный / истинный", "p": "/truː/", "cat": "ADJ", "ex": "That is true."}, {"w": "ready", "t": "готовый", "p": "/ˈrɛdi/", "cat": "ADJ", "ex": "Are you ready?"}, {"w": "available", "t": "доступный", "p": "/əˈveɪləbl/", "cat": "ADJ", "ex": "Is this available?"}, {"w": "specific", "t": "конкретный", "p": "/spɪˈsɪfɪk/", "cat": "ADJ", "ex": "Be specific."}, {"w": "current", "t": "текущий", "p": "/ˈkɜrənt/", "cat": "ADJ", "ex": "Current status."}, {"w": "professional", "t": "профессиональный", "p": "/prəˈfɛʃənəl/", "cat": "ADJ", "ex": "Stay professional."}, {"w": "effective", "t": "эффективный", "p": "/ɪˈfɛktɪv/", "cat": "ADJ", "ex": "Effective method."}, {"w": "successful", "t": "успешный", "p": "/səkˈsɛsfʊl/", "cat": "ADJ", "ex": "Be successful."}, {"w": "remote", "t": "удалённый", "p": "/rɪˈmoʊt/", "cat": "ADJ", "ex": "Work remote."}, {"w": "potential", "t": "потенциальный", "p": "/pəˈtɛnʃəl/", "cat": "ADJ", "ex": "Potential client."}, {"w": "urgent", "t": "срочный", "p": "/ˈɜrdʒənt/", "cat": "ADJ", "ex": "Urgent task."}, {"w": "active", "t": "активный", "p": "/ˈæktɪv/", "cat": "ADJ", "ex": "Stay active."}, {"w": "positive", "t": "положительный", "p": "/ˈpɒzɪtɪv/", "cat": "ADJ", "ex": "Stay positive."}, {"w": "negative", "t": "отрицательный", "p": "/ˈnɛɡətɪv/", "cat": "ADJ", "ex": "Avoid negative thinking."}, {"w": "global", "t": "глобальный", "p": "/ˈɡloʊbəl/", "cat": "ADJ", "ex": "Global market."}, {"w": "local", "t": "местный", "p": "/ˈloʊkəl/", "cat": "ADJ", "ex": "Local business."}, {"w": "digital", "t": "цифровой", "p": "/ˈdɪdʒɪtəl/", "cat": "ADJ", "ex": "Digital transformation."}, {"w": "personal", "t": "личный", "p": "/ˈpɜrsənəl/", "cat": "ADJ", "ex": "Personal growth."}, {"w": "public", "t": "публичный", "p": "/ˈpʌblɪk/", "cat": "ADJ", "ex": "Public speaking."}, {"w": "private", "t": "частный", "p": "/ˈpraɪvɪt/", "cat": "ADJ", "ex": "Private meeting."}, {"w": "full", "t": "полный", "p": "/fʊl/", "cat": "ADJ", "ex": "Full focus."}, {"w": "open", "t": "открытый", "p": "/ˈoʊpən/", "cat": "ADJ", "ex": "Open to feedback."}, {"w": "just", "t": "просто / только что", "p": "/dʒʌst/", "cat": "ADV", "ex": "Just do it."}, {"w": "also", "t": "также", "p": "/ˈɔːlsoʊ/", "cat": "ADV", "ex": "I also agree."}, {"w": "well", "t": "хорошо", "p": "/wɛl/", "cat": "ADV", "ex": "You did well."}, {"w": "even", "t": "даже", "p": "/ˈiːvən/", "cat": "ADV", "ex": "Even better."}, {"w": "back", "t": "назад", "p": "/bæk/", "cat": "ADV", "ex": "Come back."}, {"w": "still", "t": "всё ещё", "p": "/stɪl/", "cat": "ADV", "ex": "Still working on it."}, {"w": "now", "t": "сейчас", "p": "/naʊ/", "cat": "ADV", "ex": "Start now."}, {"w": "already", "t": "уже", "p": "/ɔːlˈrɛdi/", "cat": "ADV", "ex": "Already done."}, {"w": "again", "t": "снова", "p": "/əˈɡɛn/", "cat": "ADV", "ex": "Try again."}, {"w": "always", "t": "всегда", "p": "/ˈɔːlweɪz/", "cat": "ADV", "ex": "Always keep learning."}, {"w": "never", "t": "никогда", "p": "/ˈnɛvər/", "cat": "ADV", "ex": "Never give up."}, {"w": "often", "t": "часто", "p": "/ˈɒfən/", "cat": "ADV", "ex": "Do it often."}, {"w": "sometimes", "t": "иногда", "p": "/ˈsʌmtaɪmz/", "cat": "ADV", "ex": "Sometimes it takes time."}, {"w": "usually", "t": "обычно", "p": "/ˈjuːʒuəli/", "cat": "ADV", "ex": "I usually wake up early."}, {"w": "quickly", "t": "быстро", "p": "/ˈkwɪkli/", "cat": "ADV", "ex": "Act quickly."}, {"w": "slowly", "t": "медленно", "p": "/ˈsloʊli/", "cat": "ADV", "ex": "Move slowly but surely."}, {"w": "together", "t": "вместе", "p": "/təˈɡɛðər/", "cat": "ADV", "ex": "Work together."}, {"w": "probably", "t": "вероятно", "p": "/ˈprɒbəbli/", "cat": "ADV", "ex": "Probably yes."}, {"w": "actually", "t": "на самом деле", "p": "/ˈæktʃuəli/", "cat": "ADV", "ex": "Actually, no."}, {"w": "exactly", "t": "именно", "p": "/ɪɡˈzæktli/", "cat": "ADV", "ex": "Exactly right."}, {"w": "definitely", "t": "определённо", "p": "/ˈdɛfɪnɪtli/", "cat": "ADV", "ex": "Definitely do it."}, {"w": "basically", "t": "по сути", "p": "/ˈbeɪsɪkli/", "cat": "ADV", "ex": "Basically, it works."}, {"w": "currently", "t": "сейчас", "p": "/ˈkɜrəntli/", "cat": "ADV", "ex": "Currently in progress."}, {"w": "however", "t": "однако", "p": "/haʊˈɛvər/", "cat": "ADV", "ex": "Hard, however possible."}, {"w": "almost", "t": "почти", "p": "/ˈɔːlmoʊst/", "cat": "ADV", "ex": "Almost there."}, {"w": "especially", "t": "особенно", "p": "/ɪˈspɛʃəli/", "cat": "ADV", "ex": "Especially important."}, {"w": "really", "t": "действительно", "p": "/ˈrɪəli/", "cat": "ADV", "ex": "Really?"}, {"w": "very", "t": "очень", "p": "/ˈvɛri/", "cat": "ADV", "ex": "Very important."}, {"w": "quite", "t": "довольно", "p": "/kwaɪt/", "cat": "ADV", "ex": "Quite good."}, {"w": "enough", "t": "достаточно", "p": "/ɪˈnʌf/", "cat": "ADV", "ex": "Good enough."}, {"w": "finally", "t": "наконец", "p": "/ˈfaɪnəli/", "cat": "ADV", "ex": "Finally done."}, {"w": "recently", "t": "недавно", "p": "/ˈriːsəntli/", "cat": "ADV", "ex": "Recently launched."}, {"w": "immediately", "t": "немедленно", "p": "/ɪˈmiːdiətli/", "cat": "ADV", "ex": "Do it immediately."}, {"w": "directly", "t": "напрямую", "p": "/dɪˈrɛktli/", "cat": "ADV", "ex": "Speak directly."}, {"w": "simply", "t": "просто", "p": "/ˈsɪmpli/", "cat": "ADV", "ex": "Simply do it."}, {"w": "clearly", "t": "чётко", "p": "/ˈklɪrli/", "cat": "ADV", "ex": "Communicate clearly."}, {"w": "however", "t": "тем не менее", "p": "/haʊˈɛvər/", "cat": "ADV", "ex": "Hard, however doable."}, {"w": "therefore", "t": "поэтому", "p": "/ˈðɛrfɔːr/", "cat": "ADV", "ex": "Therefore, we need to act."}, {"w": "otherwise", "t": "иначе", "p": "/ˈʌðərwaɪz/", "cat": "ADV", "ex": "Work hard, otherwise fail."}, {"w": "instead", "t": "вместо", "p": "/ɪnˈstɛd/", "cat": "ADV", "ex": "Do this instead."}, {"w": "pitch", "t": "питч / презентовать", "p": "/pɪtʃ/", "cat": "NOUN", "ex": "A perfect sales pitch."}, {"w": "prospect", "t": "потенциальный клиент", "p": "/ˈprɒspɛkt/", "cat": "NOUN", "ex": "This prospect is hot."}, {"w": "lead", "t": "лид", "p": "/liːd/", "cat": "NOUN", "ex": "New lead in CRM."}, {"w": "pipeline", "t": "воронка продаж", "p": "/ˈpaɪplaɪn/", "cat": "NOUN", "ex": "Fill your pipeline."}, {"w": "conversion", "t": "конверсия", "p": "/kənˈvɜrʒən/", "cat": "NOUN", "ex": "Improve conversion rate."}, {"w": "objection", "t": "возражение", "p": "/əbˈdʒɛkʃən/", "cat": "NOUN", "ex": "Handle the objection."}, {"w": "commission", "t": "комиссия", "p": "/kəˈmɪʃən/", "cat": "NOUN", "ex": "Earn commission."}, {"w": "quota", "t": "квота / план", "p": "/ˈkwoʊtə/", "cat": "NOUN", "ex": "Hit your quota."}, {"w": "outreach", "t": "холодные касания", "p": "/ˈaʊtriːtʃ/", "cat": "NOUN", "ex": "Outreach campaign."}, {"w": "follow-up", "t": "повторное касание", "p": "/ˈfɒloʊ ʌp/", "cat": "NOUN", "ex": "Send a follow-up."}, {"w": "onboarding", "t": "онбординг", "p": "/ˈɒnbɔːrdɪŋ/", "cat": "NOUN", "ex": "Client onboarding starts today."}, {"w": "retention", "t": "удержание", "p": "/rɪˈtɛnʃən/", "cat": "NOUN", "ex": "Focus on retention."}, {"w": "churn", "t": "отток клиентов", "p": "/tʃɜrn/", "cat": "NOUN", "ex": "Reduce churn."}, {"w": "upsell", "t": "допродажа", "p": "/ˈʌpsɛl/", "cat": "NOUN", "ex": "Upsell the client."}, {"w": "discovery", "t": "выявление потребностей", "p": "/dɪˈskʌvəri/", "cat": "NOUN", "ex": "Discovery call booked."}, {"w": "proposal", "t": "коммерческое предложение", "p": "/prəˈpoʊzəl/", "cat": "NOUN", "ex": "Send a proposal."}, {"w": "agreement", "t": "соглашение", "p": "/əˈɡriːmənt/", "cat": "NOUN", "ex": "We reached an agreement."}, {"w": "discount", "t": "скидка", "p": "/ˈdɪskaʊnt/", "cat": "NOUN", "ex": "I can offer a discount."}, {"w": "deadline", "t": "дедлайн", "p": "/ˈdɛdlaɪn/", "cat": "NOUN", "ex": "Deadline is approaching."}, {"w": "benchmark", "t": "эталон / ориентир", "p": "/ˈbɛntʃmɑːrk/", "cat": "NOUN", "ex": "Set a benchmark."}, {"w": "freelance", "t": "фриланс", "p": "/ˈfriːlæns/", "cat": "NOUN", "ex": "I work freelance."}, {"w": "portfolio", "t": "портфолио", "p": "/pɔːrtˈfoʊlioʊ/", "cat": "NOUN", "ex": "Build your portfolio."}, {"w": "proposal", "t": "предложение", "p": "/prəˈpoʊzəl/", "cat": "NOUN", "ex": "Write a proposal."}, {"w": "rate", "t": "ставка / тариф", "p": "/reɪt/", "cat": "NOUN", "ex": "My hourly rate is $50."}, {"w": "niche", "t": "ниша", "p": "/niːʃ/", "cat": "NOUN", "ex": "Find your niche."}, {"w": "scope", "t": "объём работ", "p": "/skoʊp/", "cat": "NOUN", "ex": "Define the scope."}, {"w": "milestone", "t": "контрольная точка", "p": "/ˈmaɪlstoʊn/", "cat": "NOUN", "ex": "Hit the milestone."}, {"w": "deliverable", "t": "результат работы", "p": "/dɪˈlɪvərəbl/", "cat": "NOUN", "ex": "What are the deliverables?"}, {"w": "revision", "t": "правка", "p": "/rɪˈvɪʒən/", "cat": "NOUN", "ex": "One revision included."}, {"w": "testimonial", "t": "отзыв", "p": "/ˌtɛstɪˈmoʊniəl/", "cat": "NOUN", "ex": "Get a testimonial."}, {"w": "retainer", "t": "ежемесячная оплата", "p": "/rɪˈteɪnər/", "cat": "NOUN", "ex": "Monthly retainer."}, {"w": "invoice", "t": "инвойс", "p": "/ˈɪnvɔɪs/", "cat": "NOUN", "ex": "Send the invoice."}, {"w": "upfront", "t": "предоплата / заранее", "p": "/ˌʌpˈfrʌnt/", "cat": "ADJ", "ex": "50% payment upfront."}, {"w": "ongoing", "t": "текущий / постоянный", "p": "/ˈɒnɡoʊɪŋ/", "cat": "ADJ", "ex": "Ongoing project."}, {"w": "async", "t": "асинхронный", "p": "/ˈeɪsɪŋk/", "cat": "ADJ", "ex": "We work async."}, {"w": "body", "t": "тело", "p": "/ˈbɒdi/", "cat": "NOUN", "ex": "Train your body."}, {"w": "muscle", "t": "мышца", "p": "/ˈmʌsəl/", "cat": "NOUN", "ex": "Build muscle."}, {"w": "strength", "t": "сила", "p": "/strɛŋθ/", "cat": "NOUN", "ex": "Build strength."}, {"w": "health", "t": "здоровье", "p": "/hɛlθ/", "cat": "NOUN", "ex": "Health is wealth."}, {"w": "energy", "t": "энергия", "p": "/ˈɛnərdʒi/", "cat": "NOUN", "ex": "High energy today."}, {"w": "rest", "t": "отдых", "p": "/rɛst/", "cat": "NOUN", "ex": "Rest is important."}, {"w": "diet", "t": "диета / питание", "p": "/ˈdaɪɪt/", "cat": "NOUN", "ex": "Good diet matters."}, {"w": "sleep", "t": "сон", "p": "/sliːp/", "cat": "NOUN", "ex": "Get enough sleep."}, {"w": "recovery", "t": "восстановление", "p": "/rɪˈkʌvəri/", "cat": "NOUN", "ex": "Recovery day today."}, {"w": "workout", "t": "тренировка", "p": "/ˈwɜrkaʊt/", "cat": "NOUN", "ex": "Morning workout done."}, {"w": "weight", "t": "вес", "p": "/weɪt/", "cat": "NOUN", "ex": "Track your weight."}, {"w": "fitness", "t": "физическая форма", "p": "/ˈfɪtnɪs/", "cat": "NOUN", "ex": "Stay in shape."}, {"w": "exercise", "t": "упражнение", "p": "/ˈɛksərsaɪz/", "cat": "NOUN", "ex": "Do the exercise."}, {"w": "discipline", "t": "дисциплина", "p": "/ˈdɪsɪplɪn/", "cat": "NOUN", "ex": "Discipline beats motivation."}, {"w": "consistency", "t": "последовательность", "p": "/kənˈsɪstənsi/", "cat": "NOUN", "ex": "Consistency is key."}, {"w": "mindset", "t": "мышление", "p": "/ˈmaɪndsɛt/", "cat": "NOUN", "ex": "Growth mindset wins."}, {"w": "motivation", "t": "мотивация", "p": "/ˌmoʊtɪˈveɪʃən/", "cat": "NOUN", "ex": "Find your motivation."}, {"w": "confidence", "t": "уверенность", "p": "/ˈkɒnfɪdəns/", "cat": "NOUN", "ex": "Confidence is key."}, {"w": "focus", "t": "фокус", "p": "/ˈfoʊkəs/", "cat": "NOUN", "ex": "Keep your focus."}, {"w": "patience", "t": "терпение", "p": "/ˈpeɪʃəns/", "cat": "NOUN", "ex": "Have patience."}, {"w": "persistence", "t": "настойчивость", "p": "/pərˈsɪstəns/", "cat": "NOUN", "ex": "Persistence wins."}, {"w": "courage", "t": "смелость", "p": "/ˈkɜrɪdʒ/", "cat": "NOUN", "ex": "Have courage."}, {"w": "ambition", "t": "амбиция", "p": "/æmˈbɪʃən/", "cat": "NOUN", "ex": "Stay ambitious."}, {"w": "purpose", "t": "цель / предназначение", "p": "/ˈpɜrpəs/", "cat": "NOUN", "ex": "Find your purpose."}, {"w": "vision", "t": "видение", "p": "/ˈvɪʒən/", "cat": "NOUN", "ex": "Have a clear vision."}, {"w": "resilience", "t": "стойкость", "p": "/rɪˈzɪliəns/", "cat": "NOUN", "ex": "Build resilience."}, {"w": "commitment", "t": "обязательство", "p": "/kəˈmɪtmənt/", "cat": "NOUN", "ex": "Full commitment."}, {"w": "attitude", "t": "отношение / настрой", "p": "/ˈætɪtjuːd/", "cat": "NOUN", "ex": "Right attitude."}, {"w": "identity", "t": "идентичность", "p": "/aɪˈdɛntɪti/", "cat": "NOUN", "ex": "Build your identity."}, {"w": "routine", "t": "рутина / режим", "p": "/ruːˈtiːn/", "cat": "NOUN", "ex": "Build a routine."}, {"w": "although", "t": "хотя", "p": "/ɔːlˈðoʊ/", "cat": "CONJ", "ex": "Although hard, it is worth it."}, {"w": "because", "t": "потому что", "p": "/bɪˈkɒz/", "cat": "CONJ", "ex": "Do it because you want to."}, {"w": "since", "t": "так как / с тех пор", "p": "/sɪns/", "cat": "CONJ", "ex": "Since you asked."}, {"w": "while", "t": "пока / в то время как", "p": "/waɪl/", "cat": "CONJ", "ex": "Learn while you work."}, {"w": "before", "t": "до / прежде чем", "p": "/bɪˈfɔːr/", "cat": "CONJ", "ex": "Think before you act."}, {"w": "after", "t": "после", "p": "/ˈɑːftər/", "cat": "CONJ", "ex": "After the meeting."}, {"w": "until", "t": "до тех пор пока", "p": "/ənˈtɪl/", "cat": "CONJ", "ex": "Work until done."}, {"w": "unless", "t": "если только не", "p": "/ənˈlɛs/", "cat": "CONJ", "ex": "Unless you try."}, {"w": "whether", "t": "является ли", "p": "/ˈwɛðər/", "cat": "CONJ", "ex": "Whether yes or no."}, {"w": "despite", "t": "несмотря на", "p": "/dɪˈspaɪt/", "cat": "PREP", "ex": "Despite the challenge."}, {"w": "through", "t": "через / сквозь", "p": "/θruː/", "cat": "PREP", "ex": "Push through."}, {"w": "within", "t": "в пределах", "p": "/wɪˈðɪn/", "cat": "PREP", "ex": "Within budget."}, {"w": "beyond", "t": "за пределами", "p": "/biˈɒnd/", "cat": "PREP", "ex": "Go beyond limits."}, {"w": "throughout", "t": "на протяжении", "p": "/θruːˈaʊt/", "cat": "PREP", "ex": "Throughout the year."}, {"w": "regarding", "t": "касательно", "p": "/rɪˈɡɑːrdɪŋ/", "cat": "PREP", "ex": "Regarding your question."}];
+
+// ============ STATE ============
+let state = loadState();
+let sessionStats = {again:0,hard:0,good:0,easy:0};
+let flashQueue = [];
+let currentWord = null;
+let revealed = false;
+let currentTab = 'flash';
+
+function loadState(){
+  try{
+    const s = localStorage.getItem('wh_state_v2');
+    if(s) return JSON.parse(s);
+  }catch(e){}
+  return {
+    words:{},       // word -> {ease, interval, due, reps, score}
+    streak:0,
+    lastDate:'',
+    todayCount:0,
+    totalReps:0,
+    lastResetDate:''
+  };
+}
+
+function saveState(){
+  localStorage.setItem('wh_state_v2', JSON.stringify(state));
+  updateNavStats();
+}
+
+function getWordState(w){
+  if(!state.words[w]) state.words[w] = {ease:2.5,interval:0,due:0,reps:0,score:0};
+  return state.words[w];
+}
+
+// Score: 0=new, 1=learning, 2=review, 3=known
+function getDiffLevel(ws){
+  if(!ws || ws.reps===0) return 0;
+  if(ws.score<2) return 1;
+  if(ws.score<5) return 2;
+  return 3;
+}
+
+function getDiffTag(level){
+  const tags=['NEW','LEARNING','REVIEW','KNOWN'];
+  const cls=['diff-new','diff-learning','diff-review','diff-known'];
+  return {label:tags[level],cls:cls[level]};
+}
+
+// ============ SPACED REPETITION (SM-2) ============
+function sm2(ws, quality){ // quality: 0=again,1=hard,2=good,3=easy
+  let {ease,interval,reps,score} = ws;
+  if(quality<2){
+    reps=0; interval=1; score=Math.max(0,score-1);
+  } else {
+    if(reps===0) interval=1;
+    else if(reps===1) interval=6;
+    else interval=Math.round(interval*ease);
+    reps++;
+    score=Math.min(10,score+quality);
+  }
+  ease=Math.max(1.3, ease+(0.1-(3-quality)*(0.08+(3-quality)*0.02)));
+  const due=Date.now()+interval*24*60*60*1000;
+  return {ease,interval,reps,score,due};
+}
+
+// ============ FLASH QUEUE ============
+function buildQueue(){
+  const now = Date.now();
+  const due = WORDS.filter(w=>{
+    const ws=getWordState(w.w);
+    return ws.due<=now;
+  });
+  // Sort: new words first, then by score ascending (harder = more priority)
+  due.sort((a,b)=>{
+    const wa=getWordState(a.w), wb=getWordState(b.w);
+    if(wa.reps===0 && wb.reps>0) return -1;
+    if(wb.reps===0 && wa.reps>0) return 1;
+    return wa.score-wb.score;
+  });
+  // If nothing due, pick 10 worst
+  if(due.length===0){
+    const sorted=[...WORDS].sort((a,b)=>getWordState(a.w).score-getWordState(b.w).score);
+    return sorted.slice(0,20);
+  }
+  return due.slice(0,50);
+}
+
+function nextCard(){
+  if(flashQueue.length===0) flashQueue=buildQueue();
+  if(flashQueue.length===0) return null;
+  return flashQueue[0];
+}
+
+function showFlashCard(){
+  currentWord=nextCard();
+  if(!currentWord){showToast('🎉 Все слова повторены!');return;}
+  const ws=getWordState(currentWord.w);
+  const lvl=getDiffLevel(ws);
+  const tag=getDiffTag(lvl);
+  document.getElementById('diffTag').textContent=tag.label;
+  document.getElementById('diffTag').className='diff-tag '+tag.cls;
+  document.getElementById('catBadge').textContent=currentWord.cat;
+  document.getElementById('cardWord').textContent=currentWord.w;
+  document.getElementById('cardPhon').textContent=currentWord.p;
+  document.getElementById('cardTrans').textContent=currentWord.t;
+  document.getElementById('cardEx').textContent='"'+currentWord.ex+'"';
+  document.getElementById('mainCard').classList.remove('revealed');
+  document.getElementById('actionBtns').classList.remove('show');
+  revealed=false;
+  updateProgress();
+}
+
+function revealCard(){
+  if(revealed) return;
+  revealed=true;
+  document.getElementById('mainCard').classList.add('revealed');
+  document.getElementById('actionBtns').classList.add('show');
+}
+
+function rate(r){
+  if(!currentWord) return;
+  const qmap={again:0,hard:1,good:2,easy:3};
+  const q=qmap[r];
+  const ws=getWordState(currentWord.w);
+  const newWs=sm2(ws,q);
+  state.words[currentWord.w]=newWs;
+  sessionStats[r]++;
+  document.getElementById('sc-'+r).textContent=sessionStats[r];
+  state.todayCount++;
+  state.totalReps++;
+  checkStreak();
+  saveState();
+  if(r==='again'||r==='hard'){
+    flashQueue.shift();
+    const later=Math.min(flashQueue.length,5);
+    flashQueue.splice(later,0,currentWord);
+  } else {
+    flashQueue.shift();
+  }
+  showFlashCard();
+}
+
+// ============ QUIZ MODE ============
+function showQuiz(){
+  if(flashQueue.length===0) flashQueue=buildQueue();
+  const word=flashQueue[Math.floor(Math.random()*Math.min(flashQueue.length,10))];
+  if(!word) return;
+  document.getElementById('qCat').textContent=word.cat;
+  document.getElementById('qWord').textContent=word.w;
+  document.getElementById('qPhon').textContent=word.p;
+  const others=WORDS.filter(w=>w.w!==word.w);
+  shuffle(others);
+  const opts=[word,...others.slice(0,3)];
+  shuffle(opts);
+  const container=document.getElementById('qOpts');
+  container.innerHTML='';
+  opts.forEach(o=>{
+    const btn=document.createElement('button');
+    btn.className='qopt';
+    btn.textContent=o.t;
+    btn.onclick=()=>checkQuiz(btn,o.w===word.w,word.t,word);
+    container.appendChild(btn);
+  });
+}
+
+function checkQuiz(btn,correct,correctTrans,word){
+  document.querySelectorAll('.qopt').forEach(b=>b.classList.add('dis'));
+  if(correct){
+    btn.classList.add('correct');
+    const ws=getWordState(word.w);
+    state.words[word.w]=sm2(ws,2);
+    state.todayCount++;state.totalReps++;
+    checkStreak();saveState();
+    setTimeout(showQuiz,900);
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.qopt').forEach(b=>{
+      if(b.textContent===correctTrans) b.classList.add('correct');
+    });
+    const ws=getWordState(word.w);
+    state.words[word.w]=sm2(ws,0);
+    saveState();
+    setTimeout(showQuiz,1600);
+  }
+}
+
+// ============ HUNT MODE ============
+function loadHunt(){
+  // Pick 8 words weighted by difficulty (worse = more likely)
+  const weighted=[];
+  WORDS.forEach(w=>{
+    const ws=getWordState(w.w);
+    const weight=Math.max(1, 5-ws.score);
+    for(let i=0;i<weight;i++) weighted.push(w);
+  });
+  shuffle(weighted);
+  const seen=new Set();
+  const picked=[];
+  for(const w of weighted){
+    if(!seen.has(w.w)){seen.add(w.w);picked.push(w);}
+    if(picked.length>=8) break;
+  }
+  renderHunt(picked);
+}
+
+function renderHunt(words){
+  const grid=document.getElementById('huntGrid');
+  grid.innerHTML='';
+  words.forEach(w=>{
+    const ws=getWordState(w.w);
+    const lvl=getDiffLevel(ws);
+    const colors=['var(--accent)','#ffa500','var(--accent)','var(--green)'];
+    const pct=Math.min(100,(ws.score/10)*100);
+    const card=document.createElement('div');
+    card.className='hunt-card';
+    card.innerHTML=`
+      <div class="hunt-word">${w.w}</div>
+      <div class="hunt-trans">${w.t}</div>
+      <div class="hunt-score">${['🆕','📚','🔄','✅'][lvl]}</div>
+      <div class="hunt-bar"><div class="hunt-bar-fill" style="width:${pct}%;background:${colors[lvl]}"></div></div>`;
+    card.onclick=()=>{
+      const ws2=getWordState(w.w);
+      const newWs=sm2(ws2,2);
+      state.words[w.w]=newWs;
+      state.todayCount++;state.totalReps++;
+      checkStreak();saveState();
+      card.style.borderColor='var(--green)';
+      card.style.opacity='0.5';
+      setTimeout(()=>loadHunt(),300);
+    };
+    grid.appendChild(card);
+  });
+}
+
+// ============ VOCAB TAB ============
+function renderVocab(){
+  const q=document.getElementById('searchBox').value.toLowerCase();
+  const list=document.getElementById('vocabList');
+  list.innerHTML='';
+  const filtered=WORDS.filter(w=>
+    w.w.includes(q)||w.t.toLowerCase().includes(q)||w.cat.toLowerCase().includes(q)
+  ).slice(0,80);
+  filtered.forEach(w=>{
+    const ws=getWordState(w.w);
+    const lvl=getDiffLevel(ws);
+    const lbls=['NEW','УЧУ','ПОВТОР','ЗНАЮ'];
+    const cols=['var(--accent)','#ffa500','var(--accent2)','var(--green)'];
+    const item=document.createElement('div');
+    item.className='vitem';
+    item.innerHTML=`<div>
+      <div class="vword">${w.w} <span style="font-size:12px;color:var(--muted2)">${w.p}</span></div>
+      <div class="vtrans">${w.t} · <span style="color:var(--muted);font-size:11px">${w.cat}</span></div>
+    </div>
+    <span class="vbadge" style="background:${cols[lvl]}22;color:${cols[lvl]};border:1px solid ${cols[lvl]}44">${lbls[lvl]}</span>`;
+    item.onclick=()=>{
+      flashQueue=[w,...flashQueue];
+      switchTab('flash');
+      document.querySelectorAll('.tab').forEach((t,i)=>{if(i===0)t.classList.add('active');else t.classList.remove('active')});
+      showFlashCard();
+      showToast(`Слово "${w.w}" добавлено в очередь`);
+    };
+    list.appendChild(item);
+  });
+}
+
+// ============ HELPERS ============
+function checkStreak(){
+  const today=new Date().toDateString();
+  if(state.lastDate!==today){
+    const yesterday=new Date(Date.now()-86400000).toDateString();
+    if(state.lastDate===yesterday) state.streak++;
+    else state.streak=1;
+    state.lastDate=today;
+    state.todayCount=state.todayCount||0;
+  }
+  document.getElementById('streakDays').textContent=state.streak;
+  document.getElementById('navStreak').textContent=state.streak;
+}
+
+function updateNavStats(){
+  const known=Object.values(state.words).filter(w=>w.score>=5).length;
+  document.getElementById('navToday').textContent=state.todayCount||0;
+  document.getElementById('navKnown').textContent=known;
+  document.getElementById('navTotal').textContent=WORDS.length;
+  document.getElementById('streakDays').textContent=state.streak;
+  document.getElementById('navStreak').textContent=state.streak;
+}
+
+function updateProgress(){
+  const done=Object.values(state.words).filter(w=>w.reps>0).length;
+  const pct=(done/WORDS.length*100).toFixed(0);
+  document.getElementById('progBar').style.width=pct+'%';
+  document.getElementById('progLabel').textContent=`${done} из ${WORDS.length} слов изучено`;
+  document.getElementById('progPct').textContent=pct+'%';
+}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function switchTab(tab, btn){
+  currentTab=tab;
+  document.querySelectorAll('[id^="tab-"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+  if(btn){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');}
+  if(tab==='flash'){flashQueue=buildQueue();showFlashCard();}
+  if(tab==='quiz'){flashQueue=buildQueue();showQuiz();}
+  if(tab==='hunt') loadHunt();
+  if(tab==='vocab') renderVocab();
+}
+
+// ============ INIT ============
+function init(){
+  checkStreak();
+  updateNavStats();
+  updateProgress();
+  flashQueue=buildQueue();
+  showFlashCard();
+}
+
+init();
+</script>
+</body>
+</html>
