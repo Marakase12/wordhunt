@@ -18,6 +18,39 @@
 }
 body{background:var(--space1);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden;position:relative}
 /* ── SPACE CANVAS ── */
+/* ── PIXEL MOUNTAIN ── */
+#mountainCanvas{position:fixed;bottom:0;left:0;width:100%;pointer-events:none;z-index:0;opacity:0.75}
+/* ── SAKURA PETALS ── */
+.petal{position:fixed;pointer-events:none;z-index:0;font-size:10px;user-select:none;
+  animation:petalFall linear forwards;opacity:0}
+@keyframes petalFall{
+  0%{opacity:0;transform:translateY(0) rotate(0deg) translateX(0)}
+  10%{opacity:0.85}
+  90%{opacity:0.6}
+  100%{opacity:0;transform:translateY(102vh) rotate(540deg) translateX(var(--drift,40px))}
+}
+/* ── COMBO ── */
+.combo-badge{position:fixed;top:70px;right:14px;z-index:50;
+  background:linear-gradient(135deg,#ff7043,#ff4560);
+  border-radius:14px;padding:8px 14px;color:white;font-family:'Nunito',sans-serif;
+  font-weight:900;font-size:13px;text-align:center;
+  box-shadow:0 4px 20px rgba(255,69,96,0.4);
+  transform:scale(0);transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.combo-badge.show{transform:scale(1)}
+.combo-badge .combo-num{font-size:24px;line-height:1;display:block}
+.combo-badge .combo-lbl{font-size:10px;opacity:.85;letter-spacing:1px}
+/* ── AI EXPLAIN ── */
+.ai-btn{padding:8px 14px;border-radius:12px;border:1.5px solid rgba(108,92,231,0.4);
+  background:rgba(108,92,231,0.1);color:#a78bfa;
+  font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;
+  transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.ai-btn:hover{background:rgba(108,92,231,0.2);border-color:#7c4dff}
+.ai-btn.loading{opacity:.6;cursor:default}
+.ai-explain-box{background:rgba(15,19,40,0.95);border:1.5px solid rgba(108,92,231,0.3);
+  border-radius:14px;padding:14px 16px;margin-top:10px;font-size:13px;line-height:1.7;
+  color:#e0e0f8;text-align:left;display:none;backdrop-filter:blur(10px)}
+.ai-explain-box.show{display:block}
+
 #spaceCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
 /* Nebula glows */
 body::before{content:'';position:fixed;top:-20%;left:-10%;width:60%;height:70%;
@@ -353,6 +386,8 @@ main{max-width:580px;margin:0 auto;padding:14px 14px 100px}
 
 <!-- PROFILE SCREEN -->
 <canvas id="spaceCanvas"></canvas>
+<canvas id="mountainCanvas"></canvas>
+<div class="combo-badge" id="comboBadge"><span class="combo-num" id="comboNum">0</span><span class="combo-lbl">COMBO 🔥</span></div>
 <div id="profileScreen">
   <div class="ps-logo">🎯</div>
   <div class="ps-title">WordHunt</div>
@@ -473,6 +508,8 @@ main{max-width:580px;margin:0 auto;padding:14px 14px 100px}
           <button class="type-submit" onclick="checkType()">Проверить ✓</button>
         </div>
         <div class="card-hint" id="cardHint">👆 нажми чтобы открыть</div>
+        <div style="margin-top:10px"><button class="ai-btn" id="aiBtn" onclick="event.stopPropagation();explainWord()">🤖 Объясни AI</button>
+        <div class="ai-explain-box" id="aiBox"></div></div>
       </div>
       <div class="btns" id="actionBtns">
         <button class="btn btn-again" onclick="rate('again')"><span class="bi">🔁</span>Снова<span class="bv">&lt;1м</span></button>
@@ -849,6 +886,8 @@ function showCard(){
   document.getElementById('typeWrap').style.display=modes.type?'block':'none';
   document.getElementById('cardHint').style.opacity='';
   revealed=false;
+  const ab=document.getElementById('aiBox');if(ab){ab.classList.remove('show');}
+  const aib=document.getElementById('aiBtn');if(aib){aib.innerHTML='🤖 Объясни AI';aib.classList.remove('loading');}
   updateFavBtn();
 }
 function revealCard(){
@@ -876,6 +915,7 @@ function rate(r){
   if(!cur)return;
   const qm={again:0,hard:1,good:2,easy:3};
   sm2(cur.w,qm[r]);
+  updateCombo(r==='good'||r==='easy');
   sess[r]++;document.getElementById('sc-'+r).textContent=sess[r];
   logToday();checkStreak();
   // Session history
@@ -909,8 +949,8 @@ function showQuiz(){
 }
 function checkQ(btn,ok,ct,word){
   document.querySelectorAll('.qopt').forEach(b=>b.classList.add('dis'));
-  if(ok){btn.classList.add('correct');sm2(word.w,2);logToday();checkStreak();save();updateGoalUI();setTimeout(showQuiz,900);}
-  else{btn.classList.add('wrong');document.querySelectorAll('.qopt').forEach(b=>{if(b.textContent===ct)b.classList.add('correct');});sm2(word.w,0);save();setTimeout(showQuiz,1600);}
+  if(ok){btn.classList.add('correct');sm2(word.w,2);updateCombo(true);logToday();checkStreak();save();updateGoalUI();setTimeout(showQuiz,900);}
+  else{btn.classList.add('wrong');document.querySelectorAll('.qopt').forEach(b=>{if(b.textContent===ct)b.classList.add('correct');});sm2(word.w,0);updateCombo(false);save();setTimeout(showQuiz,1600);}
 }
 
 // ─── HUNT ──────────────────────────────────────────────
@@ -1244,6 +1284,238 @@ function switchTab(tab,btn){
 
   window.addEventListener('resize',()=>{init();});
   init();draw();
+})();
+
+
+// ─── COMBO SYSTEM ────────────────────────────────────────────
+let combo = 0;
+const comboMsgs = ['','','2x COMBO!','3x COMBO!','4x ОГОНЬ!','5x МОЩЬ!','6x ЗВЕРЬ!','7x ЛЕГЕНДА!','8x БЕСКОНЕЧНОСТЬ!'];
+function updateCombo(correct) {
+  if(correct) {
+    combo++;
+    if(combo >= 2) {
+      const badge = document.getElementById('comboBadge');
+      document.getElementById('comboNum').textContent = combo + 'x';
+      badge.classList.add('show');
+      clearTimeout(badge._t);
+      badge._t = setTimeout(() => badge.classList.remove('show'), 2200);
+      if(combo >= 3) showToast(comboMsgs[Math.min(combo, comboMsgs.length-1)]);
+    }
+  } else {
+    combo = 0;
+    document.getElementById('comboBadge').classList.remove('show');
+  }
+}
+
+// ─── QWEN AI EXPLAIN ─────────────────────────────────────────
+const QWEN_KEY = 'o3J99U-OMlu9laDn93xNLBQgHe6AlomG';
+const QWEN_MODEL = 'qwen/qwen3-4b:free';
+async function explainWord() {
+  if(!cur) return;
+  const btn = document.getElementById('aiBtn');
+  const box = document.getElementById('aiBox');
+  if(box.classList.contains('show')) { box.classList.remove('show'); return; }
+  btn.classList.add('loading');
+  btn.textContent = '⏳ Думаю...';
+  box.classList.remove('show');
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + QWEN_KEY,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://marakase12.github.io/wordhunt/',
+        'X-Title': 'WordHunt'
+      },
+      body: JSON.stringify({
+        model: QWEN_MODEL,
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: `Объясни английское слово "${cur.w}" (перевод: "${cur.t}") на русском языке кратко и интересно. Дай: 1) точный смысл и оттенки 2) мнемонику или ассоциацию для запоминания 3) яркий пример предложения. Максимум 4 строки. Без лишних вступлений.`
+        }]
+      })
+    });
+    const data = await res.json();
+    let text = data?.choices?.[0]?.message?.content || 'Не удалось получить ответ';
+    // Remove <think> tags if present
+    text = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    box.innerHTML = text.replace(/
+/g, '<br>');
+    box.classList.add('show');
+  } catch(e) {
+    box.innerHTML = '⚠️ Ошибка подключения к AI';
+    box.classList.add('show');
+  }
+  btn.classList.remove('loading');
+  btn.innerHTML = '🤖 Объясни AI';
+}
+
+// ─── PIXEL MOUNTAIN + SAKURA ─────────────────────────────────
+(function(){
+  const mc = document.getElementById('mountainCanvas');
+  function resizeMC(){
+    mc.width = window.innerWidth;
+    mc.height = Math.min(280, window.innerHeight * 0.32);
+    mc.style.height = mc.height + 'px';
+    drawScene();
+  }
+
+  function drawScene(){
+    const ctx = mc.getContext('2d');
+    const W = mc.width, H = mc.height;
+    const S = Math.max(2, Math.floor(W / 280)); // pixel size
+    ctx.clearRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = false;
+
+    // Mountain profile (normalized 0-1 x, 0-1 y from bottom)
+    const mW = Math.floor(W / S);
+    const mH = Math.floor(H / S);
+
+    // Draw mountain silhouette
+    const peakX = Math.floor(mW * 0.38);
+    const peakY = Math.floor(mH * 0.08);
+
+    function mtY(x) {
+      // Main mountain shape
+      const dx = Math.abs(x - peakX);
+      const side = x < peakX ? peakX : (mW - peakX);
+      const slope = dx / side;
+      return Math.floor(peakY + slope * slope * mH * 0.95);
+    }
+
+    // Mountain body
+    for(let x = 0; x < mW; x++) {
+      const top = Math.min(mtY(x), mH - 1);
+      for(let y = top; y < mH; y++) {
+        const depth = (y - top) / (mH - top);
+        // Color gradient: dark blue-purple at top, dark slate at bottom
+        let r, g, b;
+        if(y - top < 3 && Math.abs(x - peakX) < mW * 0.15) {
+          // Snow cap
+          r = 200 + Math.floor(depth*20); g = 210 + Math.floor(depth*15); b = 235;
+        } else {
+          r = Math.floor(20 + depth * 15);
+          g = Math.floor(24 + depth * 18);
+          b = Math.floor(55 + depth * 30);
+        }
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(x * S, y * S, S, S);
+      }
+    }
+
+    // Mist at base
+    const mistGrad = ctx.createLinearGradient(0, H * 0.7, 0, H);
+    mistGrad.addColorStop(0, 'rgba(108,130,200,0)');
+    mistGrad.addColorStop(0.5, 'rgba(80,100,180,0.12)');
+    mistGrad.addColorStop(1, 'rgba(50,70,160,0.28)');
+    ctx.fillStyle = mistGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Sakura tree on mountain
+    const treeX = Math.floor(peakX * S + S * 6);
+    const treeBaseY = Math.floor(mtY(peakX + 6) * S);
+    const trunkH = Math.floor(S * 14);
+    const trunkW = Math.max(S, Math.floor(S * 1.5));
+
+    // Trunk pixels
+    ctx.fillStyle = '#5a3520';
+    for(let i = 0; i < trunkH; i += S) {
+      const wobble = Math.floor(Math.sin(i * 0.3) * S * 0.5);
+      ctx.fillRect(treeX + wobble, treeBaseY - i, trunkW, S);
+    }
+
+    // Branch pixels
+    ctx.fillStyle = '#4a2e1a';
+    // Left branch
+    for(let i = 0; i < S * 8; i += S) {
+      ctx.fillRect(treeX - i, treeBaseY - trunkH + i, trunkW, S);
+    }
+    // Right branch
+    for(let i = 0; i < S * 6; i += S) {
+      ctx.fillRect(treeX + i, treeBaseY - trunkH + i * 0.7, trunkW, S);
+    }
+
+    // Blossom clusters (pixel clouds)
+    const blossomCenters = [
+      {x: treeX, y: treeBaseY - trunkH - S * 3},
+      {x: treeX - S * 7, y: treeBaseY - trunkH + S * 2},
+      {x: treeX + S * 5, y: treeBaseY - trunkH + S * 2},
+      {x: treeX - S * 3, y: treeBaseY - trunkH - S * 7},
+      {x: treeX + S * 3, y: treeBaseY - trunkH - S * 6},
+    ];
+
+    blossomCenters.forEach((c, ci) => {
+      const radius = S * (4 + ci % 2);
+      for(let bx = -radius; bx <= radius; bx += S) {
+        for(let by = -radius; by <= radius; by += S) {
+          if(bx*bx + by*by <= radius*radius * 1.2) {
+            // Pixel variation for depth
+            const bright = 0.7 + Math.random() * 0.3;
+            const r = Math.floor(255 * bright);
+            const g = Math.floor((150 + Math.random() * 30) * bright);
+            const b2 = Math.floor((170 + Math.random() * 20) * bright);
+            ctx.fillStyle = `rgba(${r},${g},${b2},${0.7 + Math.random() * 0.3})`;
+            ctx.fillRect(c.x + bx, c.y + by, S, S);
+          }
+        }
+      }
+    });
+
+    // Second smaller mountain on right
+    const m2PeakX = Math.floor(mW * 0.72);
+    const m2PeakY = Math.floor(mH * 0.22);
+    function m2Y(x) {
+      const dx = Math.abs(x - m2PeakX);
+      const side = x < m2PeakX ? m2PeakX : (mW - m2PeakX);
+      return Math.floor(m2PeakY + (dx / side) * (dx / side) * mH * 0.8);
+    }
+    for(let x = Math.floor(mW * 0.48); x < mW; x++) {
+      const top = Math.min(m2Y(x), mH - 1);
+      for(let y = top; y < mH; y++) {
+        const depth = (y - top) / (mH - top);
+        const r = Math.floor(14 + depth * 10);
+        const g = Math.floor(18 + depth * 12);
+        const b3 = Math.floor(42 + depth * 20);
+        ctx.fillStyle = `rgba(${r},${g},${b3},0.9)`;
+        ctx.fillRect(x * S, y * S, S, S);
+      }
+    }
+
+    // Store tree position for petals
+    window._sakuraPos = {
+      x: treeX, y: treeBaseY - trunkH,
+      centers: blossomCenters
+    };
+  }
+
+  // Falling petals
+  const PETAL_CHARS = ['🌸','✿','❀','❁'];
+  function spawnPetal() {
+    const pos = window._sakuraPos;
+    if(!pos) return;
+    const c = pos.centers[Math.floor(Math.random() * pos.centers.length)];
+    const el = document.createElement('div');
+    el.className = 'petal';
+    el.textContent = PETAL_CHARS[Math.floor(Math.random() * PETAL_CHARS.length)];
+    const drift = (Math.random() - 0.3) * 120;
+    el.style.cssText = `
+      left:${c.x + (Math.random()-0.5)*30}px;
+      top:${c.y}px;
+      --drift:${drift}px;
+      font-size:${8 + Math.random()*7}px;
+      animation-duration:${4 + Math.random()*5}s;
+      animation-delay:${Math.random()*0.5}s;
+    `;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+
+  window.addEventListener('resize', resizeMC);
+  resizeMC();
+  setInterval(spawnPetal, 600);
+  // Burst on load
+  setTimeout(() => { for(let i=0;i<8;i++) setTimeout(spawnPetal, i*150); }, 1500);
 })();
 
 // ─── INIT ──────────────────────────────────────────────
