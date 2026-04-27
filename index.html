@@ -643,11 +643,15 @@ const BASE_WORDS = [{"w": "be", "t": "быть", "p": "/biː/", "cat": "VERB", "
 const AVATARS=['👤','😎','🦊','🐯','🐼','🦁','🐲','⚡','🔥','🌟','💎','🚀','😏','🤩','🧠','💪'];
 let selAvatar=AVATARS[0];
 
-let profiles = JSON.parse(localStorage.getItem('wh_profiles')||'null');
-if(!profiles){
-  profiles=[{"id": "profile_danil", "name": "Данил", "avatar": "😎", "color": "#7c4dff"}, {"id": "profile_sanyok", "name": "Санёк", "avatar": "🦁", "color": "#00c896"}, {"id": "profile_sesh", "name": "Александр (Sesh)", "avatar": "🚀", "color": "#ff7043"}, {"id": "profile_vangog", "name": "Ван Гог", "avatar": "🎨", "color": "#ffb300"}];
-  localStorage.setItem('wh_profiles',JSON.stringify(profiles));
-}
+// Profiles are hardcoded — always visible on any device
+const DEFAULT_PROFILES = [
+  {"id":"profile_danil",  "name":"Даня",            "avatar":"😎","color":"#7c4dff"},
+  {"id":"profile_sesh",   "name":"Александр",       "avatar":"🚀","color":"#ff7043"},
+  {"id":"profile_vangog", "name":"Ван Гог",         "avatar":"🎨","color":"#ffb300"}
+];
+// Merge with any user-created profiles from localStorage
+const userProfiles = JSON.parse(localStorage.getItem('wh_extra_profiles')||'[]');
+let profiles = [...DEFAULT_PROFILES, ...userProfiles];
 
 let currentProfile=null, state={};
 
@@ -717,8 +721,11 @@ function createProfile(){
   const name=document.getElementById('newProfileName').value.trim();
   if(!name){showToast('Введи имя!');return;}
   const colors=['#7c4dff','#ff7043','#00c896','#ffb300','#ff4560','#2196f3'];
-  profiles.push({id:'profile_'+Date.now(),name,avatar:selAvatar,color:colors[profiles.length%colors.length]});
-  localStorage.setItem('wh_profiles',JSON.stringify(profiles));
+  const newP={id:'profile_'+Date.now(),name,avatar:selAvatar,color:colors[profiles.length%colors.length]};
+  profiles.push(newP);
+  const extra=JSON.parse(localStorage.getItem('wh_extra_profiles')||'[]');
+  extra.push(newP);
+  localStorage.setItem('wh_extra_profiles',JSON.stringify(extra));
   closeModal('addProfileModal');
   document.getElementById('newProfileName').value='';
   renderProfileScreen();showToast('Профиль создан! 🎉');
