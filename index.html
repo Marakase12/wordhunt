@@ -9,16 +9,31 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f0ede8;--bg2:#e8e4de;--card:#fff;--border:#e2ddd6;
-  --shadow:rgba(60,40,20,0.08);--shadow2:rgba(60,40,20,0.18);
+  --bg:#080b14;--bg2:#0f1320;--card:#ffffff;--border:#e2ddd6;
+  --shadow:rgba(0,0,0,0.25);--shadow2:rgba(0,0,0,0.45);
   --orange:#ff7043;--orange2:#ff9a6c;--purple:#7c4dff;
   --green:#00c896;--red:#ff4560;--gold:#ffb300;--blue:#2196f3;
   --text:#2d2416;--text2:#6b5c4a;--muted:#a8967e;
+  --space1:#080b14;--space2:#0d1528;--space3:#111b35;
 }
-body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden}
+body{background:var(--space1);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden;position:relative}
+/* ── SPACE CANVAS ── */
+#spaceCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+/* Nebula glows */
+body::before{content:'';position:fixed;top:-20%;left:-10%;width:60%;height:70%;
+  background:radial-gradient(ellipse,rgba(108,92,231,0.07) 0%,transparent 65%);
+  pointer-events:none;z-index:0;animation:nebulaDrift 20s ease-in-out infinite alternate}
+body::after{content:'';position:fixed;bottom:-10%;right:-10%;width:55%;height:60%;
+  background:radial-gradient(ellipse,rgba(0,200,150,0.05) 0%,transparent 65%);
+  pointer-events:none;z-index:0;animation:nebulaDrift 25s ease-in-out infinite alternate-reverse}
+@keyframes nebulaDrift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(3%,2%) scale(1.05)}}
+/* Everything above canvas */
+nav,main,#profileScreen,#addProfileModal,.modal-overlay,.confetti-wrap,.toast{position:relative;z-index:1}
 
 /* ── PROFILE SCREEN ── */
-#profileScreen{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+#profileScreen{position:fixed;inset:0;background:transparent;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+.ps-title{color:#fff!important}
+.ps-sub{color:rgba(255,255,255,0.5)!important}
 .ps-logo{font-size:52px;margin-bottom:6px}
 .ps-title{font-size:30px;font-weight:900;margin-bottom:4px}
 .ps-sub{font-size:14px;color:var(--muted);font-weight:700;margin-bottom:36px}
@@ -36,9 +51,14 @@ body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-
 .ps-add:hover{border-color:var(--orange);color:var(--orange)}
 
 /* ── NAV ── */
-nav{background:var(--card);border-bottom:2px solid var(--border);height:58px;padding:0 14px;
-  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;
-  box-shadow:0 2px 10px var(--shadow)}
+nav{background:rgba(8,11,20,0.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.08);
+  height:58px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,0.4)}
+.nav-logo{color:#fff!important}
+.nav-logo span{color:var(--orange)!important}
+.profile-chip{background:rgba(255,255,255,0.1)!important;border:1px solid rgba(255,255,255,0.15)!important}
+.profile-chip:hover{border-color:var(--orange)!important;background:rgba(255,112,67,0.15)!important}
+.chip-name{color:#fff!important}
 .nav-logo{font-size:17px;font-weight:900}.nav-logo span{color:var(--orange)}
 .profile-chip{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 7px;
   background:var(--bg2);border-radius:20px;cursor:pointer;transition:all .2s;border:2px solid transparent}
@@ -332,6 +352,7 @@ main{max-width:580px;margin:0 auto;padding:14px 14px 100px}
 <body>
 
 <!-- PROFILE SCREEN -->
+<canvas id="spaceCanvas"></canvas>
 <div id="profileScreen">
   <div class="ps-logo">🎯</div>
   <div class="ps-title">WordHunt</div>
@@ -1127,6 +1148,103 @@ function switchTab(tab,btn){
   if(tab==='add')renderCustomList();
   if(tab==='stats')setTimeout(renderStats,50);
 }
+
+
+// ─── SPACE BACKGROUND ─────────────────────────────────
+(function(){
+  const canvas = document.getElementById('spaceCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars=[], shootingStars=[];
+
+  function resize(){
+    W=canvas.width=window.innerWidth;
+    H=canvas.height=window.innerHeight;
+  }
+
+  function makeStar(){
+    return{
+      x:Math.random()*W, y:Math.random()*H,
+      r:Math.random()*1.4+0.2,
+      alpha:Math.random()*0.7+0.1,
+      speed:Math.random()*0.004+0.001,
+      phase:Math.random()*Math.PI*2,
+      color:Math.random()>0.85?'#b8d4ff':(Math.random()>0.7?'#ffd6b8':'#ffffff')
+    };
+  }
+
+  function init(){
+    resize();
+    stars=[];
+    const count=Math.floor((W*H)/3000);
+    for(let i=0;i<count;i++) stars.push(makeStar());
+  }
+
+  function shootingStar(){
+    shootingStars.push({
+      x:Math.random()*W*0.7, y:Math.random()*H*0.4,
+      len:Math.random()*120+80,
+      speed:Math.random()*6+4,
+      angle:Math.PI/6+Math.random()*0.3,
+      alpha:1, life:1
+    });
+  }
+
+  let frame=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // Deep space gradient
+    const grad=ctx.createRadialGradient(W*0.3,H*0.2,0,W*0.5,H*0.5,Math.max(W,H)*0.8);
+    grad.addColorStop(0,'rgba(15,20,50,0.4)');
+    grad.addColorStop(0.5,'rgba(8,11,20,0.3)');
+    grad.addColorStop(1,'rgba(5,8,16,0.2)');
+    ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+
+    // Stars
+    stars.forEach(s=>{
+      s.phase+=s.speed;
+      const a=s.alpha*(0.6+0.4*Math.sin(s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,2*Math.PI);
+      ctx.fillStyle=s.color;
+      ctx.globalAlpha=a;
+      ctx.fill();
+      // Cross sparkle for bigger stars
+      if(s.r>1.1){
+        ctx.globalAlpha=a*0.4;
+        ctx.strokeStyle=s.color;
+        ctx.lineWidth=0.5;
+        ctx.beginPath();ctx.moveTo(s.x-s.r*2.5,s.y);ctx.lineTo(s.x+s.r*2.5,s.y);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(s.x,s.y-s.r*2.5);ctx.lineTo(s.x,s.y+s.r*2.5);ctx.stroke();
+      }
+    });
+    ctx.globalAlpha=1;
+
+    // Shooting stars
+    shootingStars=shootingStars.filter(s=>{
+      s.x+=Math.cos(s.angle)*s.speed;
+      s.y+=Math.sin(s.angle)*s.speed;
+      s.life-=0.025;
+      if(s.life<=0)return false;
+      const grad2=ctx.createLinearGradient(s.x,s.y,s.x-Math.cos(s.angle)*s.len,s.y-Math.sin(s.angle)*s.len);
+      grad2.addColorStop(0,`rgba(255,255,255,${s.life*0.9})`);
+      grad2.addColorStop(0.3,`rgba(180,210,255,${s.life*0.5})`);
+      grad2.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.beginPath();
+      ctx.moveTo(s.x,s.y);
+      ctx.lineTo(s.x-Math.cos(s.angle)*s.len,s.y-Math.sin(s.angle)*s.len);
+      ctx.strokeStyle=grad2;ctx.lineWidth=1.5;ctx.stroke();
+      return true;
+    });
+
+    frame++;
+    if(frame%280===0&&Math.random()>0.3) shootingStar();
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize',()=>{init();});
+  init();draw();
+})();
 
 // ─── INIT ──────────────────────────────────────────────
 renderProfileScreen();
