@@ -1347,8 +1347,7 @@ async function explainWord() {
     let text = data?.choices?.[0]?.message?.content || 'Не удалось получить ответ';
     // Remove <think> tags if present
     text = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-    box.innerHTML = text.replace(/
-/g, '<br>');
+    box.innerHTML = text.split('\n').join('<br>');
     box.classList.add('show');
   } catch(e) {
     box.innerHTML = '⚠️ Ошибка подключения к AI';
